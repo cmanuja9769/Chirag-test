@@ -1,27 +1,27 @@
-const formikContext = useFormikContext<FormikValues>(); // Get Formik context
+// useValidation.ts
+import { useCallback } from 'react';
+import { FormikHelpers } from 'formik';
 
-  const handleNextClick = async () => {
+type ValidationFunction = (values: any, formikHelpers: FormikHelpers<any>) => Promise<void>;
+
+const useValidation = (validateDagDetails: ValidationFunction, validateDagParams: ValidationFunction) => {
+  const triggerValidation = useCallback(async (formikHelpers: FormikHelpers<any>, initialValues: any) => {
     try {
-      await triggerValidation(formikContext, formikContext.initialValues); // Pass the formik context and initialValues
-const useValidation = (validateDagDetails: () => Promise<void>, validateDagParams: () => Promise<void>) => {
-  const triggerValidation = useCallback(
-    async (formikHelpers: FormikHelpers<FormikValues>, initialValues: FormikValues) => {
-      try {
-        formikHelpers.setTouched(
-          Object.keys(initialValues).reduce((acc, field) => {
-            acc[field] = true;
-            return acc;
-          }, {} as Record<string, boolean>)
-        );
-        await validateDagDetails();
-        await validateDagParams();
-        return Promise.resolve();
-      } catch (errors) {
-        return Promise.reject(errors);
-      }
-    },
-    [validateDagDetails, validateDagParams]
-  );
+      await validateDagDetails(formikHelpers.values, formikHelpers);
+      await validateDagParams(formikHelpers.values, formikHelpers);
+    } catch (errors) {
+      throw errors;
+    }
+  }, [validateDagDetails, validateDagParams]);
 
   return { triggerValidation };
 };
+
+export default useValidation;
+
+const formikContext = useFormikContext(); // Get Formik context
+
+  const handleNextClick = async () => {
+    try {
+      await triggerValidation(formikContext, dagContext.dagData); // Pass dagData as initialValues
+      
