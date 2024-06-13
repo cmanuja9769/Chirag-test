@@ -1,30 +1,66 @@
-// useValidation.ts
-import { useCallback } from 'react';
-import { FormikHelpers } from 'formik';
-
-type ValidationFunction = (values: any, formikHelpers: FormikHelpers<any>) => Promise<void>;
-
-const useValidation = (validateDagDetails: ValidationFunction, validateDagParams: ValidationFunction) => {
-  const triggerValidation = useCallback(async (values: any, formikHelpers: FormikHelpers<any>) => {
+export const useValidation = (validateDagDetails: () => Promise<void>, validateDagParams: () => Promise<void>) => {
+  const triggerValidation = useCallback(async () => {
     try {
-      await validateDagDetails(values, formikHelpers);
-      await validateDagParams(values, formikHelpers);
+      await validateDagDetails();
+      await validateDagParams();
+      return Promise.resolve();
     } catch (errors) {
-      throw errors;
+      return Promise.reject(errors);
     }
   }, [validateDagDetails, validateDagParams]);
 
   return { triggerValidation };
 };
 
-export default useValidation;
 
+import { useTranslation } from 'react-i18next';
+import React from 'react';
+import { Box, Button, Typography } from '@mui/material';
 
-const formikContext = useFormikContext();
+import { DagHeaderProps } from '../../dag.interface';
+import { useDagContext } from '../DagContext';
+
+import { useValidation } from '../../../../utils/validation';
+import themeFile from '../../../../styles/theme.json';
+
+const DagHeader: React.FC<DagHeaderProps> = ({ onClose, onBack, step }) => {
+  const { t } = useTranslation();
+
+  const dagContext = useDagContext();
+
+  const { validateDagDetails, validateDagParams } = dagContext;
+
+  const { triggerValidation } = useValidation(validateDagDetails, validateDagParams);
 
   const handleNextClick = async () => {
     try {
-      await triggerValidation(formikContext.values, {
-        setTouched: formikContext.setTouched,
-        initialValues: formikContext.initialValues ?? {}
-      });
+      await triggerValidation();
+      dagContext?.updateDagStage(dagContext?.step + 1);
+    } catch (errors) {
+      alert(`${t('validation_error')} ${errors}`);
+    }
+  };
+
+  return (
+    <Box component="header" display="flex" justifyContent="space-between" padding={1}>
+      <Typography variant="h5" component="h5" padding={1} style={{ color: themeFile?.colors?.pfizerBlue, fontWeight: 'bold' }}>
+        {t('create_new_dag')}
+      </Typography>
+      <Box>
+        {step > 0 && (
+          <Button variant="outlined" color="primary" onClick={onBack} style={{ marginRight: '8px' }}>
+            {t('back')}
+          </Button>
+        )}
+        <Button variant="contained" color="primary" onClick={handleNextClick}>
+          {t('next')}
+        </Button>
+        <Button variant="outlined" color="secondary" onClick={onClose} style={{ marginLeft: '8px' }}>
+          {t('close')}
+        </Button>
+      </Box>
+    </Box>
+  );
+};
+
+export default DagHeader;
