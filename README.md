@@ -1,8 +1,10 @@
+// useValidation.ts
+import { useCallback } from 'react';
+
 export const useValidation = (validateDagDetails: () => Promise<void>, validateDagParams: () => Promise<void>) => {
   const triggerValidation = useCallback(async () => {
     try {
-      await validateDagDetails();
-      await validateDagParams();
+      await Promise.all([validateDagDetails(), validateDagParams()]);
       return Promise.resolve();
     } catch (errors) {
       return Promise.reject(errors);
@@ -12,32 +14,34 @@ export const useValidation = (validateDagDetails: () => Promise<void>, validateD
   return { triggerValidation };
 };
 
-
-import { useTranslation } from 'react-i18next';
+// DagHeader.tsx
 import React from 'react';
 import { Box, Button, Typography } from '@mui/material';
-
+import { useTranslation } from 'react-i18next';
+import { useFormikContext } from 'formik';
 import { DagHeaderProps } from '../../dag.interface';
 import { useDagContext } from '../DagContext';
-
 import { useValidation } from '../../../../utils/validation';
 import themeFile from '../../../../styles/theme.json';
 
 const DagHeader: React.FC<DagHeaderProps> = ({ onClose, onBack, step }) => {
   const { t } = useTranslation();
-
-  const dagContext = useDagContext();
-
-  const { validateDagDetails, validateDagParams } = dagContext;
-
+  const { validateDagDetails, validateDagParams } = useDagContext();
   const { triggerValidation } = useValidation(validateDagDetails, validateDagParams);
+  const formikContext = useFormikContext();
 
   const handleNextClick = async () => {
     try {
       await triggerValidation();
-      dagContext?.updateDagStage(dagContext?.step + 1);
-    } catch (errors) {
-      alert(`${t('validation_error')} ${errors}`);
+      formikContext.setTouched({});
+      formikContext.validateForm().then((errors) => {
+        if (Object.keys(errors).length > 0) {
+          throw new Error('Form validation failed');
+        }
+        useDagContext()?.updateDagStage(step + 1);
+      });
+    } catch (error) {
+      alert(`${t('validation_error')} ${error}`);
     }
   };
 
