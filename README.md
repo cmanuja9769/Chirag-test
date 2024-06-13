@@ -5,10 +5,10 @@ import { FormikHelpers } from 'formik';
 type ValidationFunction = (values: any, formikHelpers: FormikHelpers<any>) => Promise<void>;
 
 const useValidation = (validateDagDetails: ValidationFunction, validateDagParams: ValidationFunction) => {
-  const triggerValidation = useCallback(async (formikHelpers: FormikHelpers<any>, initialValues: any) => {
+  const triggerValidation = useCallback(async (values: any, formikHelpers: FormikHelpers<any>) => {
     try {
-      await validateDagDetails(formikHelpers.values, formikHelpers);
-      await validateDagParams(formikHelpers.values, formikHelpers);
+      await validateDagDetails(values, formikHelpers);
+      await validateDagParams(values, formikHelpers);
     } catch (errors) {
       throw errors;
     }
@@ -19,9 +19,12 @@ const useValidation = (validateDagDetails: ValidationFunction, validateDagParams
 
 export default useValidation;
 
-const formikContext = useFormikContext(); // Get Formik context
+
+const formikContext = useFormikContext();
 
   const handleNextClick = async () => {
     try {
-      await triggerValidation(formikContext, dagContext.dagData); // Pass dagData as initialValues
-      
+      await triggerValidation(formikContext.values, {
+        setTouched: formikContext.setTouched,
+        initialValues: formikContext.initialValues ?? {}
+      });
