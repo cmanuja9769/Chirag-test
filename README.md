@@ -14,6 +14,7 @@ const JobDetails: React.FC = () => {
   const { registerValidator } = useValidationContext();
 
   const [charCount, setCharCount] = useState(jobData?.description?.length || 0);
+  const [formTouched, setFormTouched] = useState(false); // Track if form has been touched
 
   const validationSchema = Yup.object({
     job_name: Yup.string().min(2, 'Too Short!').max(50, 'Too Long!').required(t('dag_name_reqd')),
@@ -44,6 +45,19 @@ const JobDetails: React.FC = () => {
     registerValidator(() => validationSchema.validate(jobData));
   }, [jobData, registerValidator]);
 
+  const handleSubmit = async (values, { setSubmitting, setFieldTouched }) => {
+    // Manually mark all fields as touched
+    Object.keys(values).forEach(field => setFieldTouched(field));
+
+    try {
+      await updateJobData(values);
+      setSubmitting(false);
+    } catch (error) {
+      console.error('Error updating job data:', error);
+      setSubmitting(false);
+    }
+  };
+
   return (
     <Box
       sx={{
@@ -64,14 +78,11 @@ const JobDetails: React.FC = () => {
       <Formik
         initialValues={jobData}
         validationSchema={validationSchema}
-        validateOnChange={true} // Ensure fields are validated on change
+        validateOnChange={false}
         validateOnBlur={true}
-        onSubmit={(values, { setSubmitting }) => {
-          updateJobData(values);
-          setSubmitting(false);
-        }}
+        onSubmit={handleSubmit}
       >
-        {({ values, handleBlur, errors, touched, setFieldValue }) => (
+        {({ values, handleBlur, errors, touched, setFieldValue, setFieldTouched, isSubmitting }) => (
           <Form>
             <Box display="inline-flex" alignItems="center" padding={2}>
               <Grid container spacing={2} direction="row" alignItems="center" justifyContent="center">
@@ -94,9 +105,9 @@ const JobDetails: React.FC = () => {
                       }}
                       onBlur={handleBlur}
                       margin="normal"
-                      error={touched?.job_name && Boolean(errors?.job_name)}
+                      error={(touched?.job_name || formTouched) && Boolean(errors?.job_name)}
                     />
-                    {touched?.job_name && errors?.job_name && (
+                    {(touched?.job_name || formTouched) && errors?.job_name && (
                       <FormHelperText error>{errors?.job_name}</FormHelperText>
                     )}
                   </Grid>
@@ -105,7 +116,7 @@ const JobDetails: React.FC = () => {
                     <TooltipComponent title={t('create_job_type')} />
                   </Grid>
                   <Grid item xs={12} sm={4}>
-                    <FormControl margin="normal" error={touched.job_type && Boolean(errors.job_type)}>
+                    <FormControl margin="normal" error={(touched.job_type || formTouched) && Boolean(errors.job_type)}>
                       <Field
                         sx={{ width: '20vw' }}
                         as={Select}
@@ -115,13 +126,16 @@ const JobDetails: React.FC = () => {
                           setFieldValue('job_type', e?.target?.value as string);
                           handleChange(e as React.ChangeEvent<HTMLInputElement>);
                         }}
-                        onBlur={handleBlur}
+                        onBlur={(e: React.FocusEvent) => {
+                          handleBlur(e);
+                          setFieldTouched('job_type', true);
+                        }}
                       >
                         <MenuItem value={t('job_det_status_snowflake')}>{t('job_det_status_snowflake')}</MenuItem>
                         <MenuItem value={t('job_det_status_databrick')}>{t('job_det_status_databrick')}</MenuItem>
                         <MenuItem value={t('job_det_status_trans')}>{t('job_det_status_trans')}</MenuItem>
                       </Field>
-                      {touched?.job_type && errors?.job_type && (
+                      {(touched?.job_type || formTouched) && errors?.job_type && (
                         <FormHelperText error>{errors?.job_type}</FormHelperText>
                       )}
                     </FormControl>
@@ -150,9 +164,9 @@ const JobDetails: React.FC = () => {
                     }}
                     onBlur={handleBlur}
                     margin="normal"
-                    error={touched?.description && Boolean(errors?.description)}
+                    error={(touched?.description || formTouched) && Boolean(errors?.description)}
                   />
-                  {touched?.description && errors?.description && (
+                  {(touched?.description || formTouched) && errors?.description && (
                     <FormHelperText error>{errors?.description}</FormHelperText>
                   )}
                   {!errors?.description && (
