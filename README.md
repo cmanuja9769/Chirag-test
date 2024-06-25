@@ -1,68 +1,15 @@
-// validationContext.tsx
-import React, { createContext, useContext, useCallback, useState, ReactNode } from 'react';
-
-interface ValidationContextType {
-  registerValidator: (validator: () => Promise<void>) => void;
-  validateAll: () => Promise<void>;
-}
-
-const ValidationContext = createContext<ValidationContextType | undefined>(undefined);
-
-interface ValidationProviderProps {
-  children: ReactNode;
-}
-
-export const ValidationProvider: React.FC<ValidationProviderProps> = ({ children }) => {
-  const [validators, setValidators] = useState<(() => Promise<void>)[]>([]);
-
-  const registerValidator = useCallback((validator: () => Promise<void>) => {
-    setValidators((prevValidators) => [...prevValidators, validator]);
-  }, []);
-
-  const validateAll = useCallback(async () => {
-    for (const validator of validators) {
-      await validator();
-    }
-  }, [validators]);
-
-  return (
-    <ValidationContext.Provider value={{ registerValidator, validateAll }}>
-      {children}
-    </ValidationContext.Provider>
-  );
-};
-
-export const useValidationContext = (): ValidationContextType => {
-  const context = useContext(ValidationContext);
-  if (!context) {
-    throw new Error('useValidationContext must be used within a ValidationProvider');
-  }
-  return context;
-};
-
-
-
-
-
 import { useTranslation } from 'react-i18next';
 import React, { useEffect, useState } from 'react';
 import { Box, TextField, FormControl, Select, MenuItem, Typography, FormHelperText, Grid } from '@mui/material';
-
 import { Field, Form, Formik } from 'formik';
 import { useJobContext } from '../../../../context/jobContext';
-
 import * as Yup from 'yup';
-
 import themeFile from '../../../../styles/theme.json';
-
 import TooltipComponent from '../../../Common/Tooltip';
 import { useValidationContext } from '../../../../context/validationContext';
 
-interface JobDetailsProps {}
-
-const JobDetails: React.FC<JobDetailsProps> = () => {
+const JobDetails: React.FC = () => {
   const { t } = useTranslation();
-
   const { jobData, updateJobData, setJobDetailsValidation } = useJobContext();
   const { registerValidator } = useValidationContext();
 
@@ -70,7 +17,7 @@ const JobDetails: React.FC<JobDetailsProps> = () => {
 
   const validationSchema = Yup.object({
     job_name: Yup.string().min(2, 'Too Short!').max(50, 'Too Long!').required(t('dag_name_reqd')),
-    description: Yup.string().min(2, 'Too Short!').max(50, 'Too Long!').required(t('dag_description_reqd')).max(256, t('no_chars')),
+    description: Yup.string().min(2, 'Too Short!').max(256, 'Too Long!').required(t('dag_description_reqd')),
     job_type: Yup.string().required(t('create_dag_status_reqd'))
   });
 
@@ -117,7 +64,7 @@ const JobDetails: React.FC<JobDetailsProps> = () => {
       <Formik
         initialValues={jobData}
         validationSchema={validationSchema}
-        validateOnChange={false}
+        validateOnChange={true} // Ensure fields are validated on change
         validateOnBlur={true}
         onSubmit={(values, { setSubmitting }) => {
           updateJobData(values);
@@ -148,9 +95,10 @@ const JobDetails: React.FC<JobDetailsProps> = () => {
                       onBlur={handleBlur}
                       margin="normal"
                       error={touched?.job_name && Boolean(errors?.job_name)}
-                      helperText={touched?.job_name && errors?.job_name}
-                      FormHelperTextProps={{ style: { position: 'absolute', bottom: '-20px' } }}
                     />
+                    {touched?.job_name && errors?.job_name && (
+                      <FormHelperText error>{errors?.job_name}</FormHelperText>
+                    )}
                   </Grid>
                   <Grid item xs={12} sm={1} marginTop="1vh" display="inline-flex">
                     <Typography sx={{ fontSize: 15, fontWeight: 'bold' }}>{t('create_job_type')}</Typography>
@@ -174,7 +122,7 @@ const JobDetails: React.FC<JobDetailsProps> = () => {
                         <MenuItem value={t('job_det_status_trans')}>{t('job_det_status_trans')}</MenuItem>
                       </Field>
                       {touched?.job_type && errors?.job_type && (
-                        <FormHelperText style={{ position: 'absolute', bottom: '-20px' }}>{errors.job_type}</FormHelperText>
+                        <FormHelperText error>{errors?.job_type}</FormHelperText>
                       )}
                     </FormControl>
                   </Grid>
@@ -203,9 +151,13 @@ const JobDetails: React.FC<JobDetailsProps> = () => {
                     onBlur={handleBlur}
                     margin="normal"
                     error={touched?.description && Boolean(errors?.description)}
-                    helperText={(touched?.description && errors?.description) || `${256 - charCount} characters remaining`}
-                    FormHelperTextProps={{ style: { position: 'absolute', bottom: '-20px' } }}
                   />
+                  {touched?.description && errors?.description && (
+                    <FormHelperText error>{errors?.description}</FormHelperText>
+                  )}
+                  {!errors?.description && (
+                    <FormHelperText>{`${256 - charCount} characters remaining`}</FormHelperText>
+                  )}
                 </Grid>
               </Grid>
             </Box>
@@ -217,89 +169,3 @@ const JobDetails: React.FC<JobDetailsProps> = () => {
 };
 
 export default JobDetails;
-
-
-
-
-import React from 'react';
-import { Box, Button, Typography } from '@mui/material';
-import { useTranslation } from 'react-i18next';
-import themeFile from '../../../styles/theme.json';
-import { HeaderProps } from './header.interface';
-import { useDagContext } from '../../../context/dagContext';
-import { useJobContext } from '../../../context/jobContext';
-import { useValidationContext } from '../../../../context/validationContext';  // Import the validation context
-
-interface HeaderComponentProps {
-  title: string;
-  onClose: () => void;
-  onBack: () => void;
-  step: number;
-  validateDetails: () => Promise<void>;
-  validateParams: () => Promise<void>;
-  validateTargetParams?: () => Promise<void>;
-  compName: string;
-}
-
-const HeaderComponent: React.FC<HeaderComponentProps> = ({
-  title,
-  onClose,
-  onBack,
-  step,
-  validateDetails,
-  validateParams,
-  validateTargetParams,
-  compName
-}) => {
-  const { t } = useTranslation();
-  const CompContext = compName === t('dag_CompName') ? useDagContext() : compName === t('job_CompName') ? useJobContext() : null;
-  const { validateAll } = useValidationContext();  // Use the validation context
-
-  const handleNextClick = async () => {
-    try {
-      await validateAll();  // Trigger validation for all registered validators
-      await validateDetails();
-      CompContext?.updateStage(step + 1);
-    } catch (error) {
-      alert(`${t('validation_error')} ${error}`);
-    }
-  };
-
-  return (
-    <Box component="header" display="flex" justifyContent="space-between" padding={1}>
-      <Typography variant="h5" component="h5" paddingTop={1} style={{ color: themeFile?.colors?.pfizerBlue, fontWeight: 'bold' }}>
-        {title}
-      </Typography>
-      <Box>
-        {step > 0 && (
-          <Button variant="outlined" color="primary" onClick={onBack} style={{ marginRight: '8px' }}>
-            {t('back')}
-
-
-// App.js or relevant component
-import React from 'react';
-import { ValidationProvider } from '../../../../context/validationContext';
-import JobDetails from './JobDetails';
-import HeaderComponent from './HeaderComponent';
-
-const App = () => {
-  return (
-    <ValidationProvider>
-      <HeaderComponent
-        title="Header Title"
-        onClose={() => {}}
-        onBack={() => {}}
-        step={1}
-        validateDetails={() => Promise.resolve()}
-        validateParams={() => Promise.resolve()}
-        validateTargetParams={() => Promise.resolve()}
-        compName="job_CompName"
-      />
-      <JobDetails />
-    </ValidationProvider>
-  );
-};
-
-export default App;
-
-
