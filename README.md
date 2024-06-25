@@ -1,24 +1,28 @@
+JobDetailsComponent.tsx :
+
 import { useTranslation } from 'react-i18next';
 import React, { useEffect, useState } from 'react';
 import { Box, TextField, FormControl, Select, MenuItem, Typography, FormHelperText, Grid } from '@mui/material';
+
 import { Field, Form, Formik } from 'formik';
 import { useJobContext } from '../../../../context/jobContext';
+
 import * as Yup from 'yup';
+
 import themeFile from '../../../../styles/theme.json';
+
 import TooltipComponent from '../../../Common/Tooltip';
-import { useValidationContext } from '../../../../context/validationContext';
 
 const JobDetails: React.FC = () => {
   const { t } = useTranslation();
+
   const { jobData, updateJobData, setJobDetailsValidation } = useJobContext();
-  const { registerValidator } = useValidationContext();
 
   const [charCount, setCharCount] = useState(jobData?.description?.length || 0);
-  const [formTouched, setFormTouched] = useState(false); // Track if form has been touched
 
   const validationSchema = Yup.object({
     job_name: Yup.string().min(2, 'Too Short!').max(50, 'Too Long!').required(t('dag_name_reqd')),
-    description: Yup.string().min(2, 'Too Short!').max(256, 'Too Long!').required(t('dag_description_reqd')),
+    description: Yup.string().min(2, 'Too Short!').max(50, 'Too Long!').required(t('dag_description_reqd')).max(256, t('no_chars')),
     job_type: Yup.string().required(t('create_dag_status_reqd'))
   });
 
@@ -40,23 +44,6 @@ const JobDetails: React.FC = () => {
       }
     });
   }, [jobData, setJobDetailsValidation]);
-
-  useEffect(() => {
-    registerValidator(() => validationSchema.validate(jobData));
-  }, [jobData, registerValidator]);
-
-  const handleSubmit = async (values, { setSubmitting, setFieldTouched }) => {
-    // Manually mark all fields as touched
-    Object.keys(values).forEach(field => setFieldTouched(field, true));
-
-    try {
-      await updateJobData(values);
-      setSubmitting(false);
-    } catch (error) {
-      console.error('Error updating job data:', error);
-      setSubmitting(false);
-    }
-  };
 
   return (
     <Box
@@ -80,9 +67,12 @@ const JobDetails: React.FC = () => {
         validationSchema={validationSchema}
         validateOnChange={false}
         validateOnBlur={true}
-        onSubmit={handleSubmit}
+        onSubmit={(values, { setSubmitting }) => {
+          updateJobData(values);
+          setSubmitting(false);
+        }}
       >
-        {({ values, handleBlur, errors, touched, setFieldValue, isSubmitting, setFieldTouched }) => (
+        {({ values, handleBlur, errors, touched, setFieldValue }) => (
           <Form>
             <Box display="inline-flex" alignItems="center" padding={2}>
               <Grid container spacing={2} direction="row" alignItems="center" justifyContent="center">
@@ -105,18 +95,17 @@ const JobDetails: React.FC = () => {
                       }}
                       onBlur={handleBlur}
                       margin="normal"
-                      error={(touched?.job_name || formTouched) && Boolean(errors?.job_name)}
+                      error={touched?.job_name && Boolean(errors?.job_name)}
+                      helperText={touched?.job_name && errors?.job_name}
+                      FormHelperTextProps={{ style: { position: 'absolute', bottom: '-20px' } }}
                     />
-                    {(touched?.job_name || formTouched) && errors?.job_name && (
-                      <FormHelperText error>{errors?.job_name}</FormHelperText>
-                    )}
                   </Grid>
                   <Grid item xs={12} sm={1} marginTop="1vh" display="inline-flex">
                     <Typography sx={{ fontSize: 15, fontWeight: 'bold' }}>{t('create_job_type')}</Typography>
                     <TooltipComponent title={t('create_job_type')} />
                   </Grid>
                   <Grid item xs={12} sm={4}>
-                    <FormControl margin="normal" error={(touched.job_type || formTouched) && Boolean(errors.job_type)}>
+                    <FormControl margin="normal" error={touched.job_type && Boolean(errors.job_type)}>
                       <Field
                         sx={{ width: '20vw' }}
                         as={Select}
@@ -126,17 +115,14 @@ const JobDetails: React.FC = () => {
                           setFieldValue('job_type', e?.target?.value as string);
                           handleChange(e as React.ChangeEvent<HTMLInputElement>);
                         }}
-                        onBlur={(e: React.FocusEvent) => {
-                          handleBlur(e);
-                          setFieldTouched('job_type', true);
-                        }}
+                        onBlur={handleBlur}
                       >
                         <MenuItem value={t('job_det_status_snowflake')}>{t('job_det_status_snowflake')}</MenuItem>
                         <MenuItem value={t('job_det_status_databrick')}>{t('job_det_status_databrick')}</MenuItem>
                         <MenuItem value={t('job_det_status_trans')}>{t('job_det_status_trans')}</MenuItem>
                       </Field>
-                      {(touched?.job_type || formTouched) && errors?.job_type && (
-                        <FormHelperText error>{errors?.job_type}</FormHelperText>
+                      {touched?.job_type && errors?.job_type && (
+                        <FormHelperText style={{ position: 'absolute', bottom: '-20px' }}>{errors.job_type}</FormHelperText>
                       )}
                     </FormControl>
                   </Grid>
@@ -164,14 +150,10 @@ const JobDetails: React.FC = () => {
                     }}
                     onBlur={handleBlur}
                     margin="normal"
-                    error={(touched?.description || formTouched) && Boolean(errors?.description)}
+                    error={touched?.description && Boolean(errors?.description)}
+                    helperText={(touched?.description && errors?.description) || `${256 - charCount} characters remaining`}
+                    FormHelperTextProps={{ style: { position: 'absolute', bottom: '-20px' } }}
                   />
-                  {(touched?.description || formTouched) && errors?.description && (
-                    <FormHelperText error>{errors?.description}</FormHelperText>
-                  )}
-                  {!errors?.description && (
-                    <FormHelperText>{`${256 - charCount} characters remaining`}</FormHelperText>
-                  )}
                 </Grid>
               </Grid>
             </Box>
@@ -183,3 +165,95 @@ const JobDetails: React.FC = () => {
 };
 
 export default JobDetails;
+
+
+HeaderComponent.tsx :
+
+
+import React from 'react';
+import { Box, Button, Typography } from '@mui/material';
+import { useTranslation } from 'react-i18next';
+import { useValidation } from '../../../utils/validation';
+import themeFile from '../../../styles/theme.json';
+import { HeaderProps } from './header.interface';
+import { useDagContext } from '../../../context/dagContext';
+import { useJobContext } from '../../../context/jobContext';
+
+const HeaderComponent: React.FC<HeaderProps> = ({
+  title,
+  onClose,
+  onBack,
+  step,
+  validateDetails,
+  validateParams,
+  validateTargetParams,
+  compName
+}) => {
+  const { t } = useTranslation();
+  const CompContext = compName === t('dag_CompName') ? useDagContext() : compName === t('job_CompName') ? useJobContext() : null;
+  const { triggerValidation } = useValidation(compName, validateDetails, validateParams, validateTargetParams);
+
+  const handleNextClick = async () => {
+    try {
+      await triggerValidation();
+      CompContext?.updateStage(step + 1);
+    } catch (error) {
+      alert(`${t('validation_error')} ${error}`);
+    }
+  };
+  return (
+    <Box component="header" display="flex" justifyContent="space-between" padding={1}>
+      <Typography variant="h5" component="h5" paddingTop={1} style={{ color: themeFile?.colors?.pfizerBlue, fontWeight: 'bold' }}>
+        {title}
+      </Typography>
+      <Box>
+        {step > 0 && (
+          <Button variant="outlined" color="primary" onClick={onBack} style={{ marginRight: '8px' }}>
+            {t('back')}
+          </Button>
+        )}
+        <Button variant="contained" color="primary" onClick={handleNextClick}>
+          {t('next')}
+        </Button>
+        <Button variant="outlined" color="secondary" onClick={onClose} style={{ marginLeft: '8px' }}>
+          {t('close')}
+        </Button>
+      </Box>
+    </Box>
+  );
+};
+
+export default HeaderComponent;
+
+
+
+index.ts useValidation method:
+
+export const useValidation = (
+  compName,
+  validateDetails?: () => Promise<void>,
+  validateParams?: () => Promise<void>,
+  validateTargetParams?: () => Promise<void>
+) => {
+  const triggerValidation = useCallback(async () => {
+    console.log('compName', compName);
+    try {
+      if (compName === 'DAGS') {
+        console.log('dag was executed');
+        await validateDetails();
+        await validateParams();
+        return Promise.resolve();
+      } else if (compName === 'JOBS') {
+        console.log('job was executed');
+        await validateDetails();
+        await validateParams();
+        await validateTargetParams();
+        return Promise.resolve();
+      }
+    } catch (errors) {
+      return Promise.reject(errors);
+    }
+  }, [validateDetails, validateParams, validateTargetParams]);
+
+  return { triggerValidation };
+};
