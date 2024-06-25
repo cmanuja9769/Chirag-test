@@ -82,7 +82,7 @@ const JobDetails: React.FC = () => {
         validateOnBlur={true}
         onSubmit={handleSubmit}
       >
-        {({ values, handleBlur, errors, touched, setFieldValue, setFieldTouched, isSubmitting }) => (
+        {({ values, handleBlur, errors, touched, setFieldValue, isSubmitting }) => (
           <Form>
             <Box display="inline-flex" alignItems="center" padding={2}>
               <Grid container spacing={2} direction="row" alignItems="center" justifyContent="center">
