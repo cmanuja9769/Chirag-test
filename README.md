@@ -1,12 +1,21 @@
-// validationContext.js
-import React, { createContext, useContext, useCallback, useState } from 'react';
+// validationContext.tsx
+import React, { createContext, useContext, useCallback, useState, ReactNode } from 'react';
 
-const ValidationContext = createContext();
+interface ValidationContextType {
+  registerValidator: (validator: () => Promise<void>) => void;
+  validateAll: () => Promise<void>;
+}
 
-export const ValidationProvider = ({ children }) => {
-  const [validators, setValidators] = useState([]);
+const ValidationContext = createContext<ValidationContextType | undefined>(undefined);
 
-  const registerValidator = useCallback((validator) => {
+interface ValidationProviderProps {
+  children: ReactNode;
+}
+
+export const ValidationProvider: React.FC<ValidationProviderProps> = ({ children }) => {
+  const [validators, setValidators] = useState<(() => Promise<void>)[]>([]);
+
+  const registerValidator = useCallback((validator: () => Promise<void>) => {
     setValidators((prevValidators) => [...prevValidators, validator]);
   }, []);
 
@@ -23,7 +32,13 @@ export const ValidationProvider = ({ children }) => {
   );
 };
 
-export const useValidationContext = () => useContext(ValidationContext);
+export const useValidationContext = (): ValidationContextType => {
+  const context = useContext(ValidationContext);
+  if (!context) {
+    throw new Error('useValidationContext must be used within a ValidationProvider');
+  }
+  return context;
+};
 
 
 
