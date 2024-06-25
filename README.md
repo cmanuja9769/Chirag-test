@@ -56,15 +56,17 @@ import * as Yup from 'yup';
 import themeFile from '../../../../styles/theme.json';
 
 import TooltipComponent from '../../../Common/Tooltip';
-import { useValidationContext } from '../../../../context/validationContext';  // Import the validation context
+import { useValidationContext } from '../../../../context/validationContext';
 
-const JobDetails: React.FC = () => {
+interface JobDetailsProps {}
+
+const JobDetails: React.FC<JobDetailsProps> = () => {
   const { t } = useTranslation();
 
   const { jobData, updateJobData, setJobDetailsValidation } = useJobContext();
-  const { registerValidator } = useValidationContext();  // Use the validation context
+  const { registerValidator } = useValidationContext();
 
-  const [charCount, setCharCount] = useState(jobData?.description?.length);
+  const [charCount, setCharCount] = useState(jobData?.description?.length || 0);
 
   const validationSchema = Yup.object({
     job_name: Yup.string().min(2, 'Too Short!').max(50, 'Too Long!').required(t('dag_name_reqd')),
@@ -92,7 +94,6 @@ const JobDetails: React.FC = () => {
   }, [jobData, setJobDetailsValidation]);
 
   useEffect(() => {
-    // Register the validator with the validation context
     registerValidator(() => validationSchema.validate(jobData));
   }, [jobData, registerValidator]);
 
@@ -162,9 +163,9 @@ const JobDetails: React.FC = () => {
                         as={Select}
                         name="job_type"
                         value={values?.job_type}
-                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-                          setFieldValue('job_type', e?.target?.value);
-                          handleChange(e);
+                        onChange={(e: React.ChangeEvent<{ value: unknown }>) => {
+                          setFieldValue('job_type', e?.target?.value as string);
+                          handleChange(e as React.ChangeEvent<HTMLInputElement>);
                         }}
                         onBlur={handleBlur}
                       >
@@ -220,7 +221,6 @@ export default JobDetails;
 
 
 
-// HeaderComponent.js
 import React from 'react';
 import { Box, Button, Typography } from '@mui/material';
 import { useTranslation } from 'react-i18next';
@@ -230,7 +230,18 @@ import { useDagContext } from '../../../context/dagContext';
 import { useJobContext } from '../../../context/jobContext';
 import { useValidationContext } from '../../../../context/validationContext';  // Import the validation context
 
-const HeaderComponent: React.FC<HeaderProps> = ({
+interface HeaderComponentProps {
+  title: string;
+  onClose: () => void;
+  onBack: () => void;
+  step: number;
+  validateDetails: () => Promise<void>;
+  validateParams: () => Promise<void>;
+  validateTargetParams?: () => Promise<void>;
+  compName: string;
+}
+
+const HeaderComponent: React.FC<HeaderComponentProps> = ({
   title,
   onClose,
   onBack,
@@ -263,21 +274,6 @@ const HeaderComponent: React.FC<HeaderProps> = ({
         {step > 0 && (
           <Button variant="outlined" color="primary" onClick={onBack} style={{ marginRight: '8px' }}>
             {t('back')}
-          </Button>
-        )}
-        <Button variant="contained" color="primary" onClick={handleNextClick}>
-          {t('next')}
-        </Button>
-        <Button variant="outlined" color="secondary" onClick={onClose} style={{ marginLeft: '8px' }}>
-          {t('close')}
-        </Button>
-      </Box>
-    </Box>
-  );
-};
-
-export default HeaderComponent;
-
 
 
 // App.js or relevant component
