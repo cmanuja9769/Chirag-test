@@ -47,7 +47,7 @@ const JobDetails: React.FC = () => {
 
   const handleSubmit = async (values, { setSubmitting, setFieldTouched }) => {
     // Manually mark all fields as touched
-    Object.keys(values).forEach(field => setFieldTouched(field));
+    Object.keys(values).forEach(field => setFieldTouched(field, true));
 
     try {
       await updateJobData(values);
@@ -82,7 +82,7 @@ const JobDetails: React.FC = () => {
         validateOnBlur={true}
         onSubmit={handleSubmit}
       >
-        {({ values, handleBlur, errors, touched, setFieldValue, isSubmitting }) => (
+        {({ values, handleBlur, errors, touched, setFieldValue, isSubmitting, setFieldTouched }) => (
           <Form>
             <Box display="inline-flex" alignItems="center" padding={2}>
               <Grid container spacing={2} direction="row" alignItems="center" justifyContent="center">
