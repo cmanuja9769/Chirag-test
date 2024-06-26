@@ -1,76 +1,3 @@
-import React from 'react';
-import { Box, Button, Typography } from '@mui/material';
-import { useTranslation } from 'react-i18next';
-import { useValidation } from '../../../utils/validation';
-import themeFile from '../../../styles/theme.json';
-import { HeaderProps } from './header.interface';
-import { useDagContext } from '../../../context/dagContext';
-import { useJobContext } from '../../../context/jobContext';
-
-const HeaderComponent: React.FC<HeaderProps> = ({
-  title,
-  onClose,
-  onBack,
-  step,
-  validateDetails,
-  validateParams,
-  validateTargetParams,
-  compName,
-  formRefs
-}) => {
-  const { t } = useTranslation();
-  const CompContext = compName === t('dag_CompName') ? useDagContext() : compName === t('job_CompName') ? useJobContext() : null;
-  const { triggerValidation } = useValidation(compName, validateDetails, validateParams, validateTargetParams);
-
-  const handleNextClick = async () => {
-    try {
-      formRefs.forEach((formRef) => {
-        if (formRef.current) {
-          formRef.current
-            .submitForm()
-            .then(() => {
-              console.log(`${formRef.current?.initialValues.constructor.name} submitted successfully`);
-            })
-            .catch((error) => {
-              console.error(`Error submitting ${formRef.current?.initialValues.constructor.name}:`, error);
-            });
-        } else {
-          console.error(`${formRef.current?.initialValues.constructor.name} ref is not yet initialized`);
-        }
-      });
-
-      // await triggerValidation();
-      // CompContext?.updateStage(step + 1);
-    } catch (error) {
-      alert(`${t('validation_error')} ${error}`);
-    }
-  };
-  return (
-    <Box component="header" display="flex" justifyContent="space-between" padding={1}>
-      <Typography variant="h5" component="h5" paddingTop={1} style={{ color: themeFile?.colors?.pfizerBlue, fontWeight: 'bold' }}>
-        {title}
-      </Typography>
-      <Box>
-        {step > 0 && (
-          <Button variant="outlined" color="primary" onClick={onBack} style={{ marginRight: '8px' }}>
-            {t('back')}
-          </Button>
-        )}
-        <Button variant="contained" color="primary" onClick={handleNextClick}>
-          {t('next')}
-        </Button>
-
-        <Button variant="outlined" color="secondary" onClick={onClose} style={{ marginLeft: '8px' }}>
-          {t('close')}
-        </Button>
-      </Box>
-    </Box>
-  );
-};
-
-export default HeaderComponent;
-
-
 import { useTranslation } from 'react-i18next';
 import React, { useEffect, useState } from 'react';
 import { Box, TextField, FormControl, Select, MenuItem, Typography, FormHelperText, Grid } from '@mui/material';
@@ -91,7 +18,7 @@ interface MyFormProps {
 
 const JobDetails: React.FC<MyFormProps> = ({ formRef }) => {
   const { t } = useTranslation();
-  const { jobData, updateJobData, setJobDetailsValidation } = useJobContext();
+  const { jobData, updateJobData, setJobDetailsValidation, isNexButtonClicked } = useJobContext();
   const [charCount, setCharCount] = useState(jobData?.description?.length || 0);
 
   const validationSchema = Yup.object({
@@ -123,6 +50,18 @@ const JobDetails: React.FC<MyFormProps> = ({ formRef }) => {
       }
     });
   }, [jobData, setJobDetailsValidation]);
+
+  useEffect(() => {
+    if (isNexButtonClicked) {
+      if (formRef?.current) {
+        formRef?.current?.submitForm();
+        const errors = formRef?.current?.validateForm();
+        if (Object.keys(errors).length === 0) {
+          console.log('No errors', errors);
+        }
+      }
+    }
+  }, [isNexButtonClicked]);
 
   return (
     <Box
@@ -246,78 +185,3 @@ const JobDetails: React.FC<MyFormProps> = ({ formRef }) => {
 };
 
 export default JobDetails;
-
-
-import { createContext, useContext, useState } from 'react';
-import { JobContextProps, JobProviderProps } from '../components/Jobs/job.interface';
-
-const JobContext = createContext<JobContextProps>({
-  jobData: null,
-  step: 0,
-  headers: [],
-  charCount: 0,
-  updateJobData: () => {},
-  updateStage: () => {},
-  updateHeaders: () => {},
-  setCharCount: () => {},
-  validateJobDetails: () => Promise.resolve(),
-  validateJobSource: () => Promise.resolve(),
-  validateJobTarget: () => Promise.resolve(),
-  setJobDetailsValidation: () => {},
-  setJobSourceValidation: () => {},
-  setJobTargetValidation: () => {}
-});
-
-export const JobProvider = ({ children }: JobProviderProps) => {
-  const [jobData, setJobData] = useState({
-    job_name: '',
-    description: '',
-    job_type: '',
-    source_conName: '',
-    source_schema: '',
-    source_object: '',
-    target_conName: '',
-    target_object: '',
-    target_schema: ''
-  });
-
-  const [headers, setHeaders] = useState([]);
-  const [step, setStep] = useState(0);
-  const [charCount, setCharCount] = useState(256);
-  const [validateJobDetails, setJobDetailsValidation] = useState(() => () => Promise.resolve());
-  const [validateJobSource, setJobSourceValidation] = useState(() => () => Promise.resolve());
-  const [validateJobTarget, setJobTargetValidation] = useState(() => () => Promise.resolve());
-
-  const updateJobData = (value: any) => {
-    setJobData(value);
-  };
-
-  const updateStage = (value: any) => {
-    setStep(value);
-  };
-
-  const updateHeaders = (value: any) => {
-    setHeaders(value);
-  };
-
-  const context: JobContextProps = {
-    jobData,
-    step,
-    headers,
-    charCount,
-    updateJobData,
-    updateStage,
-    updateHeaders,
-    setCharCount,
-    validateJobDetails,
-    validateJobSource,
-    validateJobTarget,
-    setJobDetailsValidation,
-    setJobSourceValidation,
-    setJobTargetValidation
-  };
-
-  return <JobContext.Provider value={context}>{children}</JobContext.Provider>;
-};
-
-export const useJobContext = () => useContext(JobContext);
