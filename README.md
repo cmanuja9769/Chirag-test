@@ -1,31 +1,30 @@
 import { useTranslation } from 'react-i18next';
 import React, { useEffect, useRef, useState } from 'react';
 import { Box, TextField, FormControl, Select, MenuItem, Typography, FormHelperText, Grid, Button } from '@mui/material';
-
 import { Field, Form, Formik } from 'formik';
+import axios from 'axios';
 import { useJobContext } from '../../../../context/jobContext';
-
 import * as Yup from 'yup';
-
 import themeFile from '../../../../styles/theme.json';
 
 const JobDetails: React.FC = () => {
   const { t } = useTranslation();
   const { jobData, updateJobData, setJobDetailsValidation, isNexButtonClicked, handleNextClick } = useJobContext();
   const [charCount, setCharCount] = useState(jobData?.description?.length || 0);
+  const [jobTypes, setJobTypes] = useState<string[]>([]);
   const formikRef = useRef<any>(null);
 
   const validationSchema = Yup.object({
     job_name: Yup.string().min(2, 'Too Short!').max(50, 'Too Long!').required(t('dag_name_reqd')),
     description: Yup.string().min(2, 'Too Short!').max(256, t('no_chars')).required(t('dag_description_reqd')),
-    job_type: Yup.string().required(t('create_dag_status_reqd'))
+    job_type: Yup.string().required(t('create_dag_status_reqd')),
   });
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     updateJobData((prevJobData) => ({
       ...prevJobData,
-      [name]: value
+      [name]: value,
     }));
   };
 
@@ -62,13 +61,26 @@ const JobDetails: React.FC = () => {
     }
   }, [isNexButtonClicked]);
 
+  useEffect(() => {
+    const fetchJobTypes = async () => {
+      try {
+        const response = await axios.get('/api/job-types'); // Replace with your API endpoint
+        setJobTypes(response.data);
+      } catch (error) {
+        console.error('Error fetching job types:', error);
+      }
+    };
+
+    fetchJobTypes();
+  }, []);
+
   return (
     <Box
       sx={{
         border: `2px solid ${themeFile.colors.pfizerBlue}`,
         mt: 5,
         display: 'block',
-        paddingBottom: 2
+        paddingBottom: 2,
       }}
     >
       <Typography
@@ -133,9 +145,11 @@ const JobDetails: React.FC = () => {
                         }}
                         onBlur={handleBlur}
                       >
-                        <MenuItem value={t('job_det_status_snowflake')}>{t('job_det_status_snowflake')}</MenuItem>
-                        <MenuItem value={t('job_det_status_databrick')}>{t('job_det_status_databrick')}</MenuItem>
-                        <MenuItem value={t('job_det_status_trans')}>{t('job_det_status_trans')}</MenuItem>
+                        {jobTypes.map((jobType) => (
+                          <MenuItem key={jobType} value={jobType}>
+                            {jobType}
+                          </MenuItem>
+                        ))}
                       </Field>
                       {touched.job_type && errors.job_type && <FormHelperText>{errors.job_type}</FormHelperText>}
                     </FormControl>
