@@ -9,15 +9,11 @@ import * as Yup from 'yup';
 
 import themeFile from '../../../../styles/theme.json';
 
-interface MyFormProps {
-  formRef: React.RefObject<Formik>;
-}
-
-const JobDetails: React.FC<MyFormProps> = ({ formRef }) => {
+const JobDetails: React.FC = () => {
   const { t } = useTranslation();
   const { jobData, updateJobData, setJobDetailsValidation, isNexButtonClicked, handleNextClick } = useJobContext();
   const [charCount, setCharCount] = useState(jobData?.description?.length || 0);
-  const formikRef = useRef<Formik>(null);
+  const formikRef = useRef<any>(null);
 
   const validationSchema = Yup.object({
     job_name: Yup.string().min(2, 'Too Short!').max(50, 'Too Long!').required(t('dag_name_reqd')),
@@ -34,19 +30,28 @@ const JobDetails: React.FC<MyFormProps> = ({ formRef }) => {
   };
 
   useEffect(() => {
+    setJobDetailsValidation(() => async () => {
+      try {
+        await validationSchema.validate(jobData, { abortEarly: false });
+        return Promise.resolve();
+      } catch (errors) {
+        return Promise.reject(errors);
+      }
+    });
+  }, [jobData, setJobDetailsValidation]);
+
+  useEffect(() => {
     const validForm = async () => {
       if (formikRef.current) {
         try {
           await formikRef.current.submitForm();
           const errors = await formikRef.current.validateForm();
           if (Object.keys(errors).length === 0) {
-            setJobDetailsValidation(() => Promise.resolve());
             console.log('No errors from job details', errors);
           } else {
             console.log('Errors from job details', errors);
           }
         } catch (error) {
-          setJobDetailsValidation(() => Promise.reject());
           console.error('Error during validation:', error);
         }
       }
@@ -55,7 +60,7 @@ const JobDetails: React.FC<MyFormProps> = ({ formRef }) => {
     if (isNexButtonClicked) {
       validForm();
     }
-  }, [isNexButtonClicked, setJobDetailsValidation]);
+  }, [isNexButtonClicked]);
 
   return (
     <Box
@@ -132,9 +137,7 @@ const JobDetails: React.FC<MyFormProps> = ({ formRef }) => {
                         <MenuItem value={t('job_det_status_databrick')}>{t('job_det_status_databrick')}</MenuItem>
                         <MenuItem value={t('job_det_status_trans')}>{t('job_det_status_trans')}</MenuItem>
                       </Field>
-                      {touched.job_type && errors.job_type && (
-                        <FormHelperText>{errors.job_type}</FormHelperText>
-                      )}
+                      {touched.job_type && errors.job_type && <FormHelperText>{errors.job_type}</FormHelperText>}
                     </FormControl>
                   </Grid>
                 </Grid>
@@ -174,61 +177,3 @@ const JobDetails: React.FC<MyFormProps> = ({ formRef }) => {
 };
 
 export default JobDetails;
-
-
-import React from 'react';
-import { Box, Button, Typography } from '@mui/material';
-import { useTranslation } from 'react-i18next';
-import themeFile from '../../../styles/theme.json';
-import { HeaderProps } from './header.interface';
-import { useJobContext } from '../../../context/jobContext';
-import { useValidation } from '../../../utils/validation';
-
-const HeaderComponent: React.FC<HeaderProps> = ({
-  title,
-  onClose,
-  onBack,
-  step,
-  validateDetails,
-  validateParams,
-  validateTargetParams,
-  compName
-}) => {
-  const { t } = useTranslation();
-  const jobContext = useJobContext();
-  const { triggerValidation } = useValidation(compName, validateDetails, validateParams, validateTargetParams);
-
-  const handleNext = async () => {
-    try {
-      jobContext.handleNextClick(true);
-      await triggerValidation();
-      jobContext.updateStage(step + 1);
-    } catch (error) {
-      console.error('Validation error:', error);
-      // Handle error gracefully, e.g., display an error message in UI
-    }
-  };
-
-  return (
-    <Box component="header" display="flex" justifyContent="space-between" padding={1}>
-      <Typography variant="h5" component="h5" paddingTop={1} style={{ color: themeFile.colors.pfizerBlue, fontWeight: 'bold' }}>
-        {title}
-      </Typography>
-      <Box>
-        {step > 0 && (
-          <Button variant="outlined" color="primary" onClick={onBack} style={{ marginRight: '8px' }}>
-            {t('back')}
-          </Button>
-        )}
-        <Button variant="contained" color="primary" onClick={handleNext}>
-          {t('next')}
-        </Button>
-        <Button variant="outlined" color="secondary" onClick={onClose} style={{ marginLeft: '8px' }}>
-          {t('close')}
-        </Button>
-      </Box>
-    </Box>
-  );
-};
-
-export default HeaderComponent;
