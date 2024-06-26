@@ -1,5 +1,154 @@
+import { createContext, useContext, useState } from 'react';
+import { JobContextProps, JobProviderProps } from '../components/Jobs/job.interface';
+
+const JobContext = createContext<JobContextProps>({
+  jobData: null,
+  step: 0,
+  headers: [],
+  charCount: 0,
+  updateJobData: () => {},
+  updateStage: () => {},
+  updateHeaders: () => {},
+  setCharCount: () => {},
+  validateJobDetails: () => Promise.resolve(),
+  validateJobSource: () => Promise.resolve(),
+  validateJobTarget: () => Promise.resolve(),
+  setJobDetailsValidation: () => {},
+  setJobSourceValidation: () => {},
+  setJobTargetValidation: () => {},
+  isNexButtonClicked: false,
+  handleNextClick: () => {}
+});
+
+export const JobProvider = ({ children }: JobProviderProps) => {
+  const [jobData, setJobData] = useState({
+    job_name: '',
+    description: '',
+    job_type: '',
+    source_conName: '',
+    source_schema: '',
+    source_object: '',
+    target_conName: '',
+    target_object: '',
+    target_schema: ''
+  });
+
+  const [headers, setHeaders] = useState([]);
+  const [step, setStep] = useState(0);
+  const [charCount, setCharCount] = useState(256);
+  const [validateJobDetails, setJobDetailsValidation] = useState(() => () => Promise.resolve());
+  const [validateJobSource, setJobSourceValidation] = useState(() => () => Promise.resolve());
+  const [validateJobTarget, setJobTargetValidation] = useState(() => () => Promise.resolve());
+  const [isNexButtonClicked, setNextButtonClicked] = useState(false);
+
+  const updateJobData = (value: any) => {
+    setJobData(value);
+  };
+
+  const updateStage = (value: any) => {
+    setStep(value);
+  };
+
+  const updateHeaders = (value: any) => {
+    setHeaders(value);
+  };
+
+  const handleNextClick = (value: boolean) => {
+    setNextButtonClicked(value);
+  };
+
+  const context: JobContextProps = {
+    jobData,
+    step,
+    headers,
+    charCount,
+    updateJobData,
+    updateStage,
+    updateHeaders,
+    setCharCount,
+    validateJobDetails,
+    validateJobSource,
+    validateJobTarget,
+    setJobDetailsValidation,
+    setJobSourceValidation,
+    setJobTargetValidation,
+    isNexButtonClicked,
+    handleNextClick
+  };
+
+  return <JobContext.Provider value={context}>{children}</JobContext.Provider>;
+};
+
+export const useJobContext = () => useContext(JobContext);
+
+
+HeaderComponent.tsx: 
+
+import React from 'react';
+import { Box, Button, Typography } from '@mui/material';
 import { useTranslation } from 'react-i18next';
-import React, { useEffect, useState } from 'react';
+import { useValidation } from '../../../utils/validation';
+import themeFile from '../../../styles/theme.json';
+import { HeaderProps } from './header.interface';
+import { useDagContext } from '../../../context/dagContext';
+import { useJobContext } from '../../../context/jobContext';
+
+const HeaderComponent: React.FC<HeaderProps> = ({
+  title,
+  onClose,
+  onBack,
+  step,
+  validateDetails,
+  validateParams,
+  validateTargetParams,
+  compName
+}) => {
+  const { t } = useTranslation();
+  const CompContext = compName === t('dag_CompName') ? useDagContext() : compName === t('job_CompName') ? useJobContext() : null;
+  const { triggerValidation } = useValidation(compName, validateDetails, validateParams, validateTargetParams);
+
+  const jobContext = useJobContext();
+
+  const handleNext = async () => {
+    try {
+      jobContext.handleNextClick(true);
+      await triggerValidation();
+      CompContext?.updateStage(step + 1);
+    } catch (error) {
+      alert(`${t('validation_error')} ${error}`);
+    }
+  };
+  return (
+    <Box component="header" display="flex" justifyContent="space-between" padding={1}>
+      <Typography variant="h5" component="h5" paddingTop={1} style={{ color: themeFile?.colors?.pfizerBlue, fontWeight: 'bold' }}>
+        {title}
+      </Typography>
+      <Box>
+        {step > 0 && (
+          <Button variant="outlined" color="primary" onClick={onBack} style={{ marginRight: '8px' }}>
+            {t('back')}
+          </Button>
+        )}
+        <Button variant="contained" color="primary" onClick={handleNext}>
+          {t('next')}
+        </Button>
+
+        <Button variant="outlined" color="secondary" onClick={onClose} style={{ marginLeft: '8px' }}>
+          {t('close')}
+        </Button>
+      </Box>
+    </Box>
+  );
+};
+
+export default HeaderComponent;
+
+
+JobDetails.tsx:
+
+
+import { useTranslation } from 'react-i18next';
+import React, { useEffect, useRef, useState } from 'react';
 import { Box, TextField, FormControl, Select, MenuItem, Typography, FormHelperText, Grid } from '@mui/material';
 
 import { Field, Form, Formik, FormikHelpers, FormikProps } from 'formik';
@@ -20,6 +169,7 @@ const JobDetails: React.FC<MyFormProps> = ({ formRef }) => {
   const { t } = useTranslation();
   const { jobData, updateJobData, setJobDetailsValidation, isNexButtonClicked } = useJobContext();
   const [charCount, setCharCount] = useState(jobData?.description?.length || 0);
+  const formikRef = useRef<any>(null);
 
   const validationSchema = Yup.object({
     job_name: Yup.string().min(2, 'Too Short!').max(50, 'Too Long!').required(t('dag_name_reqd')),
@@ -35,33 +185,50 @@ const JobDetails: React.FC<MyFormProps> = ({ formRef }) => {
     }));
   };
 
-  const handleSubmit = (values: JobData, actions: FormikHelpers<JobData>) => {
-    console.log('Values', values);
-    actions.setSubmitting(false);
-  };
-
-  useEffect(() => {
-    setJobDetailsValidation(() => async () => {
-      try {
-        await validationSchema.validate(jobData, { abortEarly: false });
-        return Promise.resolve();
-      } catch (errors) {
-        return Promise.reject(errors);
-      }
-    });
-  }, [jobData, setJobDetailsValidation]);
-
   useEffect(() => {
     if (isNexButtonClicked) {
-      if (formRef?.current) {
-        formRef?.current?.submitForm();
-        const errors = formRef?.current?.validateForm();
-        if (Object.keys(errors).length === 0) {
-          console.log('No errors from job details', Object.keys(errors).length);
+      const validForm = async () => {
+        if (formikRef?.current) {
+          try {
+            formikRef?.current?.submitForm();
+            const errors = await formikRef?.current?.validateForm();
+            if (Object.keys(errors).length === 0) {
+              setJobDetailsValidation(() => {
+                return Promise.resolve();
+              });
+              console.log('No errors from job details', errors);
+            } else {
+              console.log(' errors', errors);
+            }
+          } catch (errors) {
+            setJobDetailsValidation(() => {
+              return Promise.reject();
+            });
+          }
         }
-      }
+      };
+      validForm();
     }
-  }, [isNexButtonClicked]);
+  }, [isNexButtonClicked, setJobDetailsValidation]);
+
+  // useEffect(() => {
+  //   const fetchData = async () => {
+  //     try {
+  //       if (formikRef?.current) {
+  //         formikRef?.current?.submitForm();
+  //         const errors = await formikRef?.current?.validateForm();
+  //         if (Object.keys(errors).length === 0) {
+  //           console.log('No errors from job details', errors);
+  //         } else {
+  //           console.log(' errors', errors);
+  //         }
+  //       }
+  //     } catch (errors) {
+  //       console.error('error', errors);
+  //     }
+  //   };
+  //   fetchData().catch(console.error);
+  // }, [isNexButtonClicked]);
 
   return (
     <Box
@@ -81,7 +248,7 @@ const JobDetails: React.FC<MyFormProps> = ({ formRef }) => {
         {t('job_det_label')}
       </Typography>
       <Formik
-        innerRef={formRef}
+        innerRef={formikRef}
         initialValues={jobData}
         validationSchema={validationSchema}
         validateOnChange={false}
@@ -185,3 +352,33 @@ const JobDetails: React.FC<MyFormProps> = ({ formRef }) => {
 };
 
 export default JobDetails;
+
+
+export const useValidation = (
+  compName,
+  validateDetails?: () => Promise<void>,
+  validateParams?: () => Promise<void>,
+  validateTargetParams?: () => Promise<void>
+) => {
+  const triggerValidation = useCallback(async () => {
+    console.log('compName', compName);
+    try {
+      if (compName === 'DAGS') {
+        console.log('dag was executed');
+        await validateDetails();
+        await validateParams();
+        return Promise.resolve();
+      } else if (compName === 'JOBS') {
+        console.log('job was executed');
+        await validateDetails();
+        await validateParams();
+        await validateTargetParams();
+        return Promise.resolve();
+      }
+    } catch (errors) {
+      return Promise.reject(errors);
+    }
+  }, [validateDetails, validateParams, validateTargetParams]);
+
+  return { triggerValidation };
+};
