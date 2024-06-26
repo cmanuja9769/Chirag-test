@@ -57,7 +57,7 @@ const JobDetails: React.FC<MyFormProps> = ({ formRef }) => {
         formRef?.current?.submitForm();
         const errors = formRef?.current?.validateForm();
         if (Object.keys(errors).length === 0) {
-          console.log('No errors', errors);
+          console.log('No errors from job details', Object.keys(errors).length);
         }
       }
     }
