@@ -7,7 +7,6 @@ import {
   Select,
   MenuItem,
   FormControl,
-  InputLabel,
   Checkbox,
   FormControlLabel,
   Button,
@@ -43,6 +42,7 @@ const DatasetConfiguration: React.FC = () => {
   };
 
   const handleCheckboxChange = (checkbox: string) => {
+    if (openModal) return; // Do not change checkbox state if modal is open
     updateJobData((prevState) => ({
       ...prevState,
       checkboxStates: {
@@ -57,6 +57,14 @@ const DatasetConfiguration: React.FC = () => {
   const handleModalSave = () => {
     if (jobData.previewData[currentCheckbox]) {
       setOpenModal(false);
+      // Mark checkbox as checked upon valid configuration save
+      updateJobData((prevState) => ({
+        ...prevState,
+        checkboxStates: {
+          ...prevState.checkboxStates,
+          [currentCheckbox]: true
+        }
+      }));
     } else {
       // Show toast or error message for invalid configuration
       console.error('Please enter a valid configuration.');
@@ -80,6 +88,7 @@ const DatasetConfiguration: React.FC = () => {
             <FormControlLabel
               control={<Checkbox checked={jobData.checkboxStates[checkbox] || false} onChange={() => handleCheckboxChange(checkbox)} />}
               label={checkbox}
+              disabled={openModal} // Disable checkbox when modal is open
             />
           </Grid>
           <Grid item xs={12} sm={8} marginTop="3vh">
