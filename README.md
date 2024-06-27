@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import React, { useState } from 'react';
 import {
   Accordion,
@@ -18,19 +19,32 @@ import {
 } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import { useJobContext } from '../../../../context/jobContext';
-
-const options = [
-  { value: 'MERGE', checkboxes: ['Join', 'Delta Detection'] },
-  { value: 'TRUNCATE & LOAD', checkboxes: ['Join', 'Filter', 'Group By', 'Distinct'] },
-  { value: 'APPEND', checkboxes: ['Join', 'Filter', 'Group By'] },
-  { value: 'UPDATE', checkboxes: ['Distinct', 'Delta Detection'] }
-];
+import { TOAST_TYPE } from '../../../../utils/enums';
+import ToastMessage from '../../../Common/ToastMessage/ToastMessage';
 
 const DatasetConfiguration: React.FC = () => {
+  const { t } = useTranslation();
   const { jobData, updateJobData } = useJobContext();
   const [openModal, setOpenModal] = useState(false);
   const [previewModalOpen, setPreviewModalOpen] = useState(false);
   const [currentCheckbox, setCurrentCheckbox] = useState('');
+  const [openToast, setOpenToast] = useState<boolean>(false);
+  const [toastInfo, setToastInfo] = useState<{ severity: TOAST_TYPE; message: string }>({ message: '', severity: TOAST_TYPE.INFO });
+
+  const options = [
+    { value: t('merge_val'), checkboxes: [t('join_val'), t('delta_val')] },
+    { value: t('t&l_val'), checkboxes: [t('join_val'), t('filter_val'), t('group_val'), t('distinct_val')] },
+    { value: t('append_val'), checkboxes: [t('join_val'), t('filter_val'), t('group_val')] },
+    { value: t('upd_val'), checkboxes: [t('join_val'), t('delta_val')] }
+  ];
+
+  const handleToast = (message, type) => {
+    setOpenToast(true);
+    setToastInfo({
+      message: message,
+      severity: type
+    });
+  };
 
   const handleSelectChange = (event: SelectChangeEvent) => {
     const selectedOption = event.target.value as string;
@@ -42,7 +56,6 @@ const DatasetConfiguration: React.FC = () => {
   };
 
   const handleCheckboxChange = (checkbox: string) => {
-    // Open modal and set current checkbox only if it's not already open
     if (!openModal) {
       setCurrentCheckbox(checkbox);
       setOpenModal(true);
@@ -51,7 +64,6 @@ const DatasetConfiguration: React.FC = () => {
 
   const handleModalSave = () => {
     if (jobData.previewData[currentCheckbox]) {
-      // Save configuration and update checkbox state
       updateJobData((prevState) => ({
         ...prevState,
         checkboxStates: {
@@ -59,16 +71,13 @@ const DatasetConfiguration: React.FC = () => {
           [currentCheckbox]: true
         }
       }));
+      setOpenModal(false);
     } else {
-      // Show toast or error message for invalid configuration
-      console.error('Please enter a valid configuration.');
+      handleToast(t('form_error'), TOAST_TYPE.ERROR);
     }
-    // Close the modal in both cases
-    setOpenModal(false);
   };
 
   const handleModalCancel = () => {
-    // Close the modal without making any changes
     setOpenModal(false);
   };
 
@@ -85,12 +94,12 @@ const DatasetConfiguration: React.FC = () => {
             <FormControlLabel
               control={<Checkbox checked={jobData.checkboxStates[checkbox] || false} onChange={() => handleCheckboxChange(checkbox)} />}
               label={checkbox}
-              disabled={openModal} // Disable checkbox when modal is open
+              disabled={openModal}
             />
           </Grid>
           <Grid item xs={12} sm={8} marginTop="3vh">
             <Button variant="contained" disabled={!jobData.checkboxStates[checkbox]} onClick={handlePreviewButtonClick}>
-              Preview Configuration
+              {t('preview_config_lbl')}
             </Button>
           </Grid>
         </Grid>
@@ -106,7 +115,7 @@ const DatasetConfiguration: React.FC = () => {
           className="tw-bg-pfizerBlue tw-text-white tw-font-bold tw-ps-1"
         >
           <Typography variant="h6" component="h6" paddingLeft={1}>
-            Dataset Level Configuration
+            {t('dataset_lvl_lbl')}
           </Typography>
         </AccordionSummary>
         <Box display="inline-flex" alignItems="center" padding={2}>
@@ -114,14 +123,14 @@ const DatasetConfiguration: React.FC = () => {
             <Grid container spacing={1} direction="row" alignItems="center" justifyContent="center">
               <Grid item xs={12} sm={12} display="inline-flex" alignItems="center">
                 <Grid item xs={12} sm={2} marginTop="2vh" display="inline-flex">
-                  <Typography sx={{ fontSize: 15, fontWeight: 'bold' }}>Operation:</Typography>
+                  <Typography sx={{ fontSize: 15, fontWeight: 'bold' }}>{t('operation_lbl')}</Typography>
                 </Grid>
                 <Grid item xs={12} sm={4} className="tw-ms-10">
                   <FormControl margin="normal">
-                    <Select sx={{ width: '20vw' }} value={jobData.selectedOption} onChange={handleSelectChange}>
-                      {options.map((option) => (
-                        <MenuItem key={option.value} value={option.value}>
-                          {option.value}
+                    <Select sx={{ width: '20vw' }} value={jobData?.selectedOption} onChange={handleSelectChange}>
+                      {options?.map((option?) => (
+                        <MenuItem key={option?.value} value={option?.value}>
+                          {option?.value}
                         </MenuItem>
                       ))}
                     </Select>
@@ -135,12 +144,12 @@ const DatasetConfiguration: React.FC = () => {
           {renderCheckboxes()}
         </Box>
       </Accordion>
-
       <Modal open={openModal} onClose={() => setOpenModal(false)}>
         <Box sx={{ padding: '20px', backgroundColor: 'white', margin: '20px auto', width: '300px' }}>
-          <Typography variant="h6">{currentCheckbox} Configuration</Typography>
+          <Typography variant="h6">
+            {currentCheckbox} {t('configuration_lbl')}
+          </Typography>
           <TextField
-            label="Configuration"
             fullWidth
             value={jobData.previewData[currentCheckbox] || ''}
             onChange={(e) =>
@@ -153,18 +162,18 @@ const DatasetConfiguration: React.FC = () => {
               }))
             }
           />
-          <Button onClick={handleModalSave}>Save</Button>
-          <Button onClick={handleModalCancel}>Cancel</Button>
+          <Button onClick={handleModalSave}>{t('save')}</Button>
+          <Button onClick={handleModalCancel}>{t('cancel')}</Button>
         </Box>
       </Modal>
-
       <Modal open={previewModalOpen} onClose={() => setPreviewModalOpen(false)}>
         <Box sx={{ padding: '20px', backgroundColor: 'white', margin: '20px auto', width: '300px' }}>
-          <Typography variant="h6">Preview Configuration</Typography>
-          <Typography>{jobData.previewData[currentCheckbox] || 'No data available'}</Typography>
-          <Button onClick={() => setPreviewModalOpen(false)}>Close</Button>
+          <Typography variant="h6">{t('preview_config_lbl')}</Typography>
+          <Typography>{jobData.previewData[currentCheckbox] || t('no_data_lbl')}</Typography>
+          <Button onClick={() => setPreviewModalOpen(false)}>{t('close')}</Button>
         </Box>
       </Modal>
+      <ToastMessage severity={toastInfo.severity} isVisible={openToast} hideToast={() => setOpenToast(false)} message={toastInfo.message} />;
     </Box>
   );
 };
