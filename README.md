@@ -42,22 +42,16 @@ const DatasetConfiguration: React.FC = () => {
   };
 
   const handleCheckboxChange = (checkbox: string) => {
-    if (openModal) return; // Do not change checkbox state if modal is open
-    updateJobData((prevState) => ({
-      ...prevState,
-      checkboxStates: {
-        ...prevState.checkboxStates,
-        [checkbox]: !prevState.checkboxStates[checkbox]
-      }
-    }));
-    setCurrentCheckbox(checkbox);
-    setOpenModal(true);
+    // Open modal and set current checkbox only if it's not already open
+    if (!openModal) {
+      setCurrentCheckbox(checkbox);
+      setOpenModal(true);
+    }
   };
 
   const handleModalSave = () => {
     if (jobData.previewData[currentCheckbox]) {
-      setOpenModal(false);
-      // Mark checkbox as checked upon valid configuration save
+      // Save configuration and update checkbox state
       updateJobData((prevState) => ({
         ...prevState,
         checkboxStates: {
@@ -69,9 +63,12 @@ const DatasetConfiguration: React.FC = () => {
       // Show toast or error message for invalid configuration
       console.error('Please enter a valid configuration.');
     }
+    // Close the modal in both cases
+    setOpenModal(false);
   };
 
   const handleModalCancel = () => {
+    // Close the modal without making any changes
     setOpenModal(false);
   };
 
