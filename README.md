@@ -55,6 +55,15 @@ const DatasetConfiguration: React.FC = () => {
   };
 
   const handleModalSave = () => {
+    if (jobData.previewData[currentCheckbox]) {
+      setOpenModal(false);
+    } else {
+      // Show toast or error message for invalid configuration
+      console.error('Please enter a valid configuration.');
+    }
+  };
+
+  const handleModalCancel = () => {
     setOpenModal(false);
   };
 
@@ -82,8 +91,6 @@ const DatasetConfiguration: React.FC = () => {
       </Grid>
     ));
   };
-
-  const allCheckboxesSelected = Object.values(jobData.checkboxStates).some((value) => value);
 
   return (
     <Box className="tw-mt-5 tw-block tw-pb-2">
@@ -141,7 +148,7 @@ const DatasetConfiguration: React.FC = () => {
             }
           />
           <Button onClick={handleModalSave}>Save</Button>
-          <Button onClick={() => setOpenModal(false)}>Cancel</Button>
+          <Button onClick={handleModalCancel}>Cancel</Button>
         </Box>
       </Modal>
 
