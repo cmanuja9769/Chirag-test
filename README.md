@@ -1,4 +1,4 @@
-import { createContext, useContext, useState } from 'react';
+import { createContext, useContext, useState, ReactNode } from 'react';
 import { JobContextProps, JobProviderProps } from '../components/Jobs/job.interface';
 
 const JobContext = createContext<JobContextProps>({
@@ -60,6 +60,34 @@ export const JobProvider = ({ children }: JobProviderProps) => {
     setNextButtonClicked(value);
   };
 
+  const updateCheckboxState = (checkbox: string) => {
+    setJobData((prevState) => ({
+      ...prevState,
+      checkboxStates: {
+        ...prevState.checkboxStates,
+        [checkbox]: !prevState.checkboxStates[checkbox],
+      },
+    }));
+  };
+
+  const updateSelectedOption = (option: string) => {
+    setJobData((prevState) => ({
+      ...prevState,
+      selectedOption: option,
+      checkboxStates: {},
+    }));
+  };
+
+  const updatePreviewData = (checkbox: string, data: string) => {
+    setJobData((prevState) => ({
+      ...prevState,
+      previewData: {
+        ...prevState.previewData,
+        [checkbox]: data,
+      },
+    }));
+  };
+
   const context: JobContextProps = {
     jobData,
     step,
@@ -76,14 +104,16 @@ export const JobProvider = ({ children }: JobProviderProps) => {
     setJobSourceValidation,
     setJobTargetValidation,
     isNexButtonClicked,
-    handleNextClick
+    handleNextClick,
+    updateCheckboxState,
+    updateSelectedOption,
+    updatePreviewData,
   };
 
   return <JobContext.Provider value={context}>{children}</JobContext.Provider>;
 };
 
 export const useJobContext = () => useContext(JobContext);
-
 
 import { ReactNode } from 'react';
 
@@ -106,6 +136,9 @@ export interface JobData {
   target_conName?: string;
   target_object?: string;
   target_schema?: string;
+  selectedOption?: string;
+  checkboxStates?: { [key: string]: boolean };
+  previewData?: { [key: string]: string };
 }
 
 export interface JobContextProps {
@@ -127,6 +160,9 @@ export interface JobContextProps {
   setJobTargetValidation?: React.Dispatch<React.SetStateAction<() => Promise<void>>>;
   isNexButtonClicked?: boolean;
   handleNextClick?: React.Dispatch<React.SetStateAction<boolean>>;
+  updateCheckboxState?: (checkbox: string) => void;
+  updateSelectedOption?: (option: string) => void;
+  updatePreviewData?: (checkbox: string, data: string) => void;
 }
 
 export interface JobProviderProps {
