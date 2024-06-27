@@ -38,7 +38,7 @@ const DatasetConfiguration: React.FC = () => {
     { value: t('upd_val'), checkboxes: [t('join_val'), t('delta_val')] }
   ];
 
-  const handleToast = (message, type) => {
+  const handleToast = (message: string, type: TOAST_TYPE) => {
     setOpenToast(true);
     setToastInfo({
       message: message,
@@ -56,7 +56,15 @@ const DatasetConfiguration: React.FC = () => {
   };
 
   const handleCheckboxChange = (checkbox: string) => {
-    if (!openModal) {
+    if (checkbox === t('distinct_val')) {
+      updateJobData((prevState) => ({
+        ...prevState,
+        checkboxStates: {
+          ...prevState.checkboxStates,
+          [checkbox]: !prevState.checkboxStates[checkbox]
+        }
+      }));
+    } else {
       setCurrentCheckbox(checkbox);
       setOpenModal(true);
     }
@@ -94,14 +102,16 @@ const DatasetConfiguration: React.FC = () => {
             <FormControlLabel
               control={<Checkbox checked={jobData.checkboxStates[checkbox] || false} onChange={() => handleCheckboxChange(checkbox)} />}
               label={checkbox}
-              disabled={openModal}
+              disabled={checkbox === t('distinct_val')}
             />
           </Grid>
-          <Grid item xs={12} sm={8} marginTop="3vh">
-            <Button variant="contained" disabled={!jobData.checkboxStates[checkbox]} onClick={handlePreviewButtonClick}>
-              {t('preview_config_lbl')}
-            </Button>
-          </Grid>
+          {checkbox !== t('distinct_val') && (
+            <Grid item xs={12} sm={8} marginTop="3vh">
+              <Button variant="contained" disabled={!jobData.checkboxStates[checkbox]} onClick={handlePreviewButtonClick}>
+                {t('preview_config_lbl')}
+              </Button>
+            </Grid>
+          )}
         </Grid>
       </Grid>
     ));
