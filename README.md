@@ -3,12 +3,38 @@ APIs:
 localhost:3001/api/v1/criteria?identifier=IDENTIFIER_PTCDH_SNOWFLAKE_CONNECTIONS_WITH_QUERYSTRING&search=Med
 method: GET
 
+returns something like this : [
+    {
+        "CONNECTION_NAME": "GEN-AI",
+        "CONNECTION_ID": "9927344209"
+    }
+]
+
 localhost:3001/api/v1/schema/getSchemaByConnection?connectionId=7599058705
 method: GET
 
+returns something like this : {
+    "schema": [
+        {
+            "ENTITY_NAME": "PTCDH Landing Layer",
+            "SCHEMA_NAME": "PTCDH_LND"
+        }
+    ]
+}
+
 localhost:3001/api/v1/schema/getSchemaByConnection?connectionId=7599058705&schemaName=PTCDH_LND
 method: GET
- 
+
+ returns something like this : {
+    "objects": [
+        "LND_SAP_US_TRANSACTION",
+        "LND_SAP_JP_TRANSACTION",
+        "LND_SAP_GLBL2_TRANSACTION",
+        "LND_SAP_GLBL1_TRANSACTION",
+        "LND_SAP_GLBL_TRANSACTION",
+        "LND_SAMPLES_TRANSACTION"
+    ]
+}
 
 import { useTranslation } from 'react-i18next';
 import React, { useEffect, useRef, useState } from 'react';
