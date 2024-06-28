@@ -2,7 +2,7 @@ import { useTranslation } from 'react-i18next';
 import React, { useEffect, useRef, useState } from 'react';
 import { Box, FormControl, Autocomplete, TextField, Typography, FormHelperText, Grid } from '@mui/material';
 
-import { Field, Form, Formik } from 'formik';
+import { Form, Formik } from 'formik';
 import { useJobContext } from '../../../../context/jobContext';
 import axios from 'axios';
 import * as Yup from 'yup';
@@ -12,7 +12,7 @@ import ToastMessage from '../../../Common/ToastMessage/ToastMessage';
 
 const TargetConfiguration: React.FC = () => {
   const { t } = useTranslation();
-  const { jobData, updateJobData, setJobTargetValidation, isNexButtonClicked } = useJobContext();
+  const { jobData, updateJobData, setJobTargetValidation, isNextButtonClicked } = useJobContext();
   const formikRef = useRef<any>(null);
   const [openToast, setOpenToast] = useState<boolean>(false);
   const [toastInfo, setToastInfo] = useState<{ severity: TOAST_TYPE; message: string }>({ message: '', severity: TOAST_TYPE.INFO });
@@ -95,10 +95,10 @@ const TargetConfiguration: React.FC = () => {
   }, [jobData, setJobTargetValidation]);
 
   useEffect(() => {
-    if (isNexButtonClicked) {
+    if (isNextButtonClicked) {
       validForm();
     }
-  }, [isNexButtonClicked]);
+  }, [isNextButtonClicked]);
 
   return (
     <Box className="tw-mt-5 tw-block tw-pb-2 tw-border-solid tw-border-2 tw-border-pfizerBlue">
@@ -134,6 +134,12 @@ const TargetConfiguration: React.FC = () => {
                         fetchConnections(newValue);
                         setFieldValue('target_conName', newValue);
                         handleChange('target_conName', newValue);
+                        setFieldValue('target_schema', '');
+                        setFieldValue('target_object', '');
+                        handleChange('target_schema', '');
+                        handleChange('target_object', '');
+                        setSchemaOptions([]);
+                        setObjectOptions([]);
                       }}
                       onChange={(e, newValue) => {
                         const selectedConnection = connectionOptions.find((option) => option.CONNECTION_NAME === newValue);
@@ -142,6 +148,12 @@ const TargetConfiguration: React.FC = () => {
                           setFieldValue('target_conName', newValue);
                           handleChange('target_conName', newValue);
                         }
+                        setFieldValue('target_schema', '');
+                        setFieldValue('target_object', '');
+                        handleChange('target_schema', '');
+                        handleChange('target_object', '');
+                        setSchemaOptions([]);
+                        setObjectOptions([]);
                       }}
                       renderInput={(params) => <TextField {...params} label={t('job_target_conName')} />}
                     />
@@ -168,6 +180,9 @@ const TargetConfiguration: React.FC = () => {
                           setFieldValue('target_schema', newValue);
                           handleChange('target_schema', newValue);
                         }
+                        setFieldValue('target_object', '');
+                        handleChange('target_object', '');
+                        setObjectOptions([]);
                       }}
                       renderInput={(params) => <TextField {...params} label={t('job_target_schema')} />}
                     />
@@ -192,201 +207,4 @@ const TargetConfiguration: React.FC = () => {
                       }}
                       renderInput={(params) => <TextField {...params} label={t('job_target_object')} />}
                     />
-                    {touched?.target_object && errors?.target_object && (
-                      <FormHelperText className="tw-absolute tw-bottom-[-1.2vw]">{errors?.target_object}</FormHelperText>
-                    )}
-                  </FormControl>
-                </Grid>
-              </Grid>
-            </Box>
-          </Form>
-        )}
-      </Formik>
-      <ToastMessage severity={toastInfo.severity} isVisible={openToast} hideToast={() => setOpenToast(false)} message={toastInfo.message} />
-    </Box>
-  );
-};
-
-export default TargetConfiguration;
-
-
-
-jobContext.tsx
-
-import { createContext, useContext, useState, ReactNode } from 'react';
-import { JobContextProps, JobProviderProps } from '../components/Jobs/job.interface';
-
-const JobContext = createContext<JobContextProps>({
-  jobData: null,
-  step: 0,
-  headers: [],
-  charCount: 0,
-  updateJobData: () => {},
-  updateStage: () => {},
-  updateHeaders: () => {},
-  setCharCount: () => {},
-  validateJobDetails: () => Promise.resolve(),
-  validateJobSource: () => Promise.resolve(),
-  validateJobTarget: () => Promise.resolve(),
-  setJobDetailsValidation: () => {},
-  setJobSourceValidation: () => {},
-  setJobTargetValidation: () => {},
-  isNexButtonClicked: false,
-  handleNextClick: () => {}
-});
-
-export const JobProvider = ({ children }: JobProviderProps) => {
-  const [jobData, setJobData] = useState({
-    job_name: '',
-    description: '',
-    job_type: '',
-    source_conName: '',
-    source_schema: '',
-    source_object: '',
-    target_conName: '',
-    target_object: '',
-    target_schema: '',
-    selectedOption: '',
-    checkboxStates: {},
-    previewData: {}
-  });
-
-  const [headers, setHeaders] = useState([]);
-  const [step, setStep] = useState(0);
-  const [charCount, setCharCount] = useState(256);
-  const [validateJobDetails, setJobDetailsValidation] = useState(() => () => Promise.resolve());
-  const [validateJobSource, setJobSourceValidation] = useState(() => () => Promise.resolve());
-  const [validateJobTarget, setJobTargetValidation] = useState(() => () => Promise.resolve());
-  const [isNexButtonClicked, setNextButtonClicked] = useState(false);
-
-  const updateJobData = (value?: any) => {
-    setJobData(value);
-  };
-
-  const updateStage = (value?: any) => {
-    setStep(value);
-  };
-
-  const updateHeaders = (value?: any) => {
-    setHeaders(value);
-  };
-
-  const handleNextClick = (value?: boolean) => {
-    setNextButtonClicked(value);
-  };
-
-  const updateCheckboxState = (checkbox?: string) => {
-    setJobData((prevState?) => ({
-      ...prevState,
-      checkboxStates: {
-        ...prevState?.checkboxStates,
-        [checkbox]: !prevState.checkboxStates[checkbox]
-      }
-    }));
-  };
-
-  const updateSelectedOption = (option?: string) => {
-    setJobData((prevState) => ({
-      ...prevState,
-      selectedOption: option,
-      checkboxStates: {}
-    }));
-  };
-
-  const updatePreviewData = (checkbox?: string, data?: string) => {
-    setJobData((prevState?) => ({
-      ...prevState,
-      previewData: {
-        ...prevState?.previewData,
-        [checkbox]: data
-      }
-    }));
-  };
-
-  const context: JobContextProps = {
-    jobData,
-    step,
-    headers,
-    charCount,
-    updateJobData,
-    updateStage,
-    updateHeaders,
-    setCharCount,
-    validateJobDetails,
-    validateJobSource,
-    validateJobTarget,
-    setJobDetailsValidation,
-    setJobSourceValidation,
-    setJobTargetValidation,
-    isNexButtonClicked,
-    handleNextClick,
-    updateCheckboxState,
-    updateSelectedOption,
-    updatePreviewData
-  };
-
-  return <JobContext.Provider value={context}>{children}</JobContext.Provider>;
-};
-
-export const useJobContext = () => useContext(JobContext);
-
-
-import { ReactNode } from 'react';
-
-export interface JobDataProps {
-  id?: number;
-  name?: string;
-  tags?: string[];
-  createdtime?: string;
-  description?: string;
-  status?: string;
-}
-
-export interface JobData {
-  job_name?: string;
-  description?: string;
-  job_type?: string;
-  source_conName?: string;
-  source_schema?: string;
-  source_object?: string;
-  target_conName?: string;
-  target_object?: string;
-  target_schema?: string;
-  selectedOption?: string;
-  checkboxStates?: { [key: string]: boolean };
-  previewData?: { [key: string]: string };
-}
-
-export interface JobContextProps {
-  jobData?: JobData;
-  step?: number;
-  headers: any[];
-  charCount: number;
-  updateJobData?: React.Dispatch<React.SetStateAction<JobData>>;
-  updateStage?: React.Dispatch<React.SetStateAction<number>>;
-  setValidateJobDetailsForm?: React.Dispatch<React.SetStateAction<() => Promise<void>>>;
-  setValidateJobParamsForm?: React.Dispatch<React.SetStateAction<() => Promise<void>>>;
-  updateHeaders?: React.Dispatch<React.SetStateAction<any[]>>;
-  setCharCount: React.Dispatch<React.SetStateAction<number>>;
-  validateJobDetails?: () => Promise<void>;
-  validateJobSource?: () => Promise<void>;
-  validateJobTarget?: () => Promise<void>;
-  setJobDetailsValidation?: React.Dispatch<React.SetStateAction<() => Promise<void>>>;
-  setJobSourceValidation?: React.Dispatch<React.SetStateAction<() => Promise<void>>>;
-  setJobTargetValidation?: React.Dispatch<React.SetStateAction<() => Promise<void>>>;
-  isNexButtonClicked?: boolean;
-  handleNextClick?: React.Dispatch<React.SetStateAction<boolean>>;
-  updateCheckboxState?: (checkbox: string) => void;
-  updateSelectedOption?: (option: string) => void;
-  updatePreviewData?: (checkbox: string, data: string) => void;
-}
-
-export interface JobProviderProps {
-  children?: ReactNode;
-}
-
-export interface JobHeaderProps {
-  onClose?: () => void;
-  step?: number;
-  onBack?: () => void;
-}
+                    {touched?.target_object
