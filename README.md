@@ -12,7 +12,7 @@ import ToastMessage from '../../../Common/ToastMessage/ToastMessage';
 
 const TargetConfiguration: React.FC = () => {
   const { t } = useTranslation();
-  const { jobData, updateJobData, setJobTargetValidation, isNextButtonClicked } = useJobContext();
+  const { jobData, updateJobData, setJobTargetValidation, isNexButtonClicked } = useJobContext();
   const formikRef = useRef<any>(null);
   const [openToast, setOpenToast] = useState<boolean>(false);
   const [toastInfo, setToastInfo] = useState<{ severity: TOAST_TYPE; message: string }>({ message: '', severity: TOAST_TYPE.INFO });
@@ -95,10 +95,10 @@ const TargetConfiguration: React.FC = () => {
   }, [jobData, setJobTargetValidation]);
 
   useEffect(() => {
-    if (isNextButtonClicked) {
+    if (isNexButtonClicked) {
       validForm();
     }
-  }, [isNextButtonClicked]);
+  }, [isNexButtonClicked]);
 
   return (
     <Box className="tw-mt-5 tw-block tw-pb-2 tw-border-solid tw-border-2 tw-border-pfizerBlue">
@@ -207,4 +207,19 @@ const TargetConfiguration: React.FC = () => {
                       }}
                       renderInput={(params) => <TextField {...params} label={t('job_target_object')} />}
                     />
-                    {touched?.target_object
+                    {touched?.target_object && errors?.target_object && (
+                      <FormHelperText className="tw-absolute tw-bottom-[-1.2vw]">{errors?.target_object}</FormHelperText>
+                    )}
+                  </FormControl>
+                </Grid>
+              </Grid>
+            </Box>
+          </Form>
+        )}
+      </Formik>
+      <ToastMessage severity={toastInfo.severity} isVisible={openToast} hideToast={() => setOpenToast(false)} message={toastInfo.message} />
+    </Box>
+  );
+};
+
+export default TargetConfiguration;
