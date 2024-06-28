@@ -10,7 +10,7 @@ import TooltipComponent from '../../../Common/Tooltip';
 import { TOAST_TYPE } from '../../../../utils/enums';
 import ToastMessage from '../../../Common/ToastMessage/ToastMessage';
 
-const JobTargetConfig: React.FC = () => {
+const TargetConfiguration: React.FC = () => {
   const { t } = useTranslation();
   const { jobData, updateJobData, setJobTargetValidation, isNexButtonClicked } = useJobContext();
   const formikRef = useRef<any>(null);
@@ -52,28 +52,32 @@ const JobTargetConfig: React.FC = () => {
     }
   };
 
-  const fetchConnections = async (searchValue: string) => {
+  const fetchConnections = async (searchValue?: string) => {
     try {
-      const response = await axios.get(`http://localhost:3001/api/v1/criteria?identifier=IDENTIFIER_PTCDH_SNOWFLAKE_CONNECTIONS_WITH_QUERYSTRING&search=${searchValue}`);
-      setConnectionOptions(response.data);
+      const response = await axios.get(
+        `http://localhost:3001/api/v1/criteria?identifier=IDENTIFIER_PTCDH_SNOWFLAKE_CONNECTIONS_WITH_QUERYSTRING&search=${searchValue}`
+      );
+      setConnectionOptions(response?.data);
     } catch (error) {
       handleToast(t('fetch_error'), TOAST_TYPE.ERROR);
     }
   };
 
-  const fetchSchemas = async (connectionId: string) => {
+  const fetchSchemas = async (connectionId?: string) => {
     try {
       const response = await axios.get(`http://localhost:3001/api/v1/schema/getSchemaByConnection?connectionId=${connectionId}`);
-      setSchemaOptions(response.data.schema);
+      setSchemaOptions(response?.data?.schema);
     } catch (error) {
       handleToast(t('fetch_error'), TOAST_TYPE.ERROR);
     }
   };
 
-  const fetchObjects = async (connectionId: string, schemaName: string) => {
+  const fetchObjects = async (connectionId?: string, schemaName?: string) => {
     try {
-      const response = await axios.get(`http://localhost:3001/api/v1/schema/getSchemaByConnection?connectionId=${connectionId}&schemaName=${schemaName}`);
-      setObjectOptions(response.data.objects);
+      const response = await axios?.get(
+        `http://localhost:3001/api/v1/schema/getSchemaByConnection?connectionId=${connectionId}&schemaName=${schemaName}`
+      );
+      setObjectOptions(response?.data.objects);
     } catch (error) {
       handleToast(t('fetch_error'), TOAST_TYPE.ERROR);
     }
@@ -124,7 +128,7 @@ const JobTargetConfig: React.FC = () => {
                   <FormControl margin="normal" error={touched?.target_conName && Boolean(errors?.target_conName)}>
                     <Autocomplete
                       sx={{ width: '20vw' }}
-                      options={connectionOptions.map(option => option.CONNECTION_NAME)}
+                      options={connectionOptions.map((option) => option.CONNECTION_NAME)}
                       value={values?.target_conName}
                       onInputChange={(e, newValue) => {
                         fetchConnections(newValue);
@@ -132,7 +136,7 @@ const JobTargetConfig: React.FC = () => {
                         handleChange('target_conName', newValue);
                       }}
                       onChange={(e, newValue) => {
-                        const selectedConnection = connectionOptions.find(option => option.CONNECTION_NAME === newValue);
+                        const selectedConnection = connectionOptions.find((option) => option.CONNECTION_NAME === newValue);
                         if (selectedConnection) {
                           fetchSchemas(selectedConnection.CONNECTION_ID);
                           setFieldValue('target_conName', newValue);
@@ -154,12 +158,13 @@ const JobTargetConfig: React.FC = () => {
                   <FormControl margin="normal" error={touched?.target_schema && Boolean(errors?.target_schema)}>
                     <Autocomplete
                       sx={{ width: '20vw' }}
-                      options={schemaOptions.map(option => option.SCHEMA_NAME)}
+                      options={schemaOptions.map((option) => option.SCHEMA_NAME)}
                       value={values?.target_schema}
                       onChange={(e, newValue) => {
-                        const selectedSchema = schemaOptions.find(option => option.SCHEMA_NAME === newValue);
+                        const selectedConnection = connectionOptions.find((option) => option.CONNECTION_NAME === values?.target_conName);
+                        const selectedSchema = schemaOptions.find((option) => option.SCHEMA_NAME === newValue);
                         if (selectedSchema) {
-                          fetchObjects(values?.target_conName, newValue);
+                          fetchObjects(selectedConnection.CONNECTION_ID, newValue);
                           setFieldValue('target_schema', newValue);
                           handleChange('target_schema', newValue);
                         }
@@ -202,54 +207,36 @@ const JobTargetConfig: React.FC = () => {
   );
 };
 
-export default JobTargetConfig;
+export default TargetConfiguration;
 
 
 
-import React, { createContext, useContext, useState, ReactNode, useCallback } from 'react';
+jobContext.tsx
 
-interface JobData {
-  job_name: string;
-  description: string;
-  job_type: string;
-  source_conName: string;
-  source_schema: string;
-  source_object: string;
-  target_conName: string;
-  target_schema: string;
-  target_object: string;
-  selectedOption: string;
-  checkboxStates: Record<string, boolean>;
-  previewData: Record<string, string>;
-}
+import { createContext, useContext, useState, ReactNode } from 'react';
+import { JobContextProps, JobProviderProps } from '../components/Jobs/job.interface';
 
-interface JobContextProps {
-  jobData: JobData;
-  step: number;
-  headers: any[];
-  charCount: number;
-  updateJobData: (newData: Partial<JobData>) => void;
-  updateStage: (value: number) => void;
-  updateHeaders: (headers: any[]) => void;
-  setCharCount: (count: number) => void;
-  validateJobDetails: () => Promise<void>;
-  validateJobSource: () => Promise<void>;
-  validateJobTarget: () => Promise<void>;
-  setJobDetailsValidation: (validationFn: () => Promise<void>) => void;
-  setJobSourceValidation: (validationFn: () => Promise<void>) => void;
-  setJobTargetValidation: (validationFn: () => Promise<void>) => void;
-  isNexButtonClicked: boolean;
-  handleNextClick: (clicked: boolean) => void;
-}
-
-interface JobProviderProps {
-  children: ReactNode;
-}
-
-const JobContext = createContext<JobContextProps | undefined>(undefined);
+const JobContext = createContext<JobContextProps>({
+  jobData: null,
+  step: 0,
+  headers: [],
+  charCount: 0,
+  updateJobData: () => {},
+  updateStage: () => {},
+  updateHeaders: () => {},
+  setCharCount: () => {},
+  validateJobDetails: () => Promise.resolve(),
+  validateJobSource: () => Promise.resolve(),
+  validateJobTarget: () => Promise.resolve(),
+  setJobDetailsValidation: () => {},
+  setJobSourceValidation: () => {},
+  setJobTargetValidation: () => {},
+  isNexButtonClicked: false,
+  handleNextClick: () => {}
+});
 
 export const JobProvider = ({ children }: JobProviderProps) => {
-  const [jobData, setJobData] = useState<JobData>({
+  const [jobData, setJobData] = useState({
     job_name: '',
     description: '',
     job_type: '',
@@ -257,36 +244,73 @@ export const JobProvider = ({ children }: JobProviderProps) => {
     source_schema: '',
     source_object: '',
     target_conName: '',
-    target_schema: '',
     target_object: '',
+    target_schema: '',
     selectedOption: '',
     checkboxStates: {},
     previewData: {}
   });
 
-  const [headers, setHeaders] = useState<any[]>([]);
+  const [headers, setHeaders] = useState([]);
   const [step, setStep] = useState(0);
   const [charCount, setCharCount] = useState(256);
-  const [validateJobDetails, setJobDetailsValidation] = useState<() => Promise<void>>(() => async () => {});
-  const [validateJobSource, setJobSourceValidation] = useState<() => Promise<void>>(() => async () => {});
-  const [validateJobTarget, setJobTargetValidation] = useState<() => Promise<void>>(() => async () => {});
+  const [validateJobDetails, setJobDetailsValidation] = useState(() => () => Promise.resolve());
+  const [validateJobSource, setJobSourceValidation] = useState(() => () => Promise.resolve());
+  const [validateJobTarget, setJobTargetValidation] = useState(() => () => Promise.resolve());
   const [isNexButtonClicked, setNextButtonClicked] = useState(false);
 
-  const updateJobData = useCallback((newData: Partial<JobData>) => {
-    setJobData((prevData) => ({
-      ...prevData,
-      ...newData
-    }));
-  }, []);
+  const updateJobData = (value?: any) => {
+    setJobData(value);
+  };
 
-  const contextValue = {
+  const updateStage = (value?: any) => {
+    setStep(value);
+  };
+
+  const updateHeaders = (value?: any) => {
+    setHeaders(value);
+  };
+
+  const handleNextClick = (value?: boolean) => {
+    setNextButtonClicked(value);
+  };
+
+  const updateCheckboxState = (checkbox?: string) => {
+    setJobData((prevState?) => ({
+      ...prevState,
+      checkboxStates: {
+        ...prevState?.checkboxStates,
+        [checkbox]: !prevState.checkboxStates[checkbox]
+      }
+    }));
+  };
+
+  const updateSelectedOption = (option?: string) => {
+    setJobData((prevState) => ({
+      ...prevState,
+      selectedOption: option,
+      checkboxStates: {}
+    }));
+  };
+
+  const updatePreviewData = (checkbox?: string, data?: string) => {
+    setJobData((prevState?) => ({
+      ...prevState,
+      previewData: {
+        ...prevState?.previewData,
+        [checkbox]: data
+      }
+    }));
+  };
+
+  const context: JobContextProps = {
     jobData,
     step,
     headers,
     charCount,
     updateJobData,
-    updateStage: setStep,
-    updateHeaders: setHeaders,
+    updateStage,
+    updateHeaders,
     setCharCount,
     validateJobDetails,
     validateJobSource,
@@ -295,16 +319,74 @@ export const JobProvider = ({ children }: JobProviderProps) => {
     setJobSourceValidation,
     setJobTargetValidation,
     isNexButtonClicked,
-    handleNextClick: setNextButtonClicked
+    handleNextClick,
+    updateCheckboxState,
+    updateSelectedOption,
+    updatePreviewData
   };
 
-  return <JobContext.Provider value={contextValue}>{children}</JobContext.Provider>;
+  return <JobContext.Provider value={context}>{children}</JobContext.Provider>;
 };
 
-export const useJobContext = (): JobContextProps => {
-  const context = useContext(JobContext);
-  if (!context) {
-    throw new Error('useJobContext must be used within a JobProvider');
-  }
-  return context;
-};
+export const useJobContext = () => useContext(JobContext);
+
+
+import { ReactNode } from 'react';
+
+export interface JobDataProps {
+  id?: number;
+  name?: string;
+  tags?: string[];
+  createdtime?: string;
+  description?: string;
+  status?: string;
+}
+
+export interface JobData {
+  job_name?: string;
+  description?: string;
+  job_type?: string;
+  source_conName?: string;
+  source_schema?: string;
+  source_object?: string;
+  target_conName?: string;
+  target_object?: string;
+  target_schema?: string;
+  selectedOption?: string;
+  checkboxStates?: { [key: string]: boolean };
+  previewData?: { [key: string]: string };
+}
+
+export interface JobContextProps {
+  jobData?: JobData;
+  step?: number;
+  headers: any[];
+  charCount: number;
+  updateJobData?: React.Dispatch<React.SetStateAction<JobData>>;
+  updateStage?: React.Dispatch<React.SetStateAction<number>>;
+  setValidateJobDetailsForm?: React.Dispatch<React.SetStateAction<() => Promise<void>>>;
+  setValidateJobParamsForm?: React.Dispatch<React.SetStateAction<() => Promise<void>>>;
+  updateHeaders?: React.Dispatch<React.SetStateAction<any[]>>;
+  setCharCount: React.Dispatch<React.SetStateAction<number>>;
+  validateJobDetails?: () => Promise<void>;
+  validateJobSource?: () => Promise<void>;
+  validateJobTarget?: () => Promise<void>;
+  setJobDetailsValidation?: React.Dispatch<React.SetStateAction<() => Promise<void>>>;
+  setJobSourceValidation?: React.Dispatch<React.SetStateAction<() => Promise<void>>>;
+  setJobTargetValidation?: React.Dispatch<React.SetStateAction<() => Promise<void>>>;
+  isNexButtonClicked?: boolean;
+  handleNextClick?: React.Dispatch<React.SetStateAction<boolean>>;
+  updateCheckboxState?: (checkbox: string) => void;
+  updateSelectedOption?: (option: string) => void;
+  updatePreviewData?: (checkbox: string, data: string) => void;
+}
+
+export interface JobProviderProps {
+  children?: ReactNode;
+}
+
+export interface JobHeaderProps {
+  onClose?: () => void;
+  step?: number;
+  onBack?: () => void;
+}
