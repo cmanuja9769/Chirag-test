@@ -1,48 +1,10 @@
-APIs:
-
-localhost:3001/api/v1/criteria?identifier=IDENTIFIER_PTCDH_SNOWFLAKE_CONNECTIONS_WITH_QUERYSTRING&search=Med
-method: GET
-
-returns something like this : [
-    {
-        "CONNECTION_NAME": "GEN-AI",
-        "CONNECTION_ID": "9927344209"
-    }
-]
-
-localhost:3001/api/v1/schema/getSchemaByConnection?connectionId=7599058705
-method: GET
-
-returns something like this : {
-    "schema": [
-        {
-            "ENTITY_NAME": "PTCDH Landing Layer",
-            "SCHEMA_NAME": "PTCDH_LND"
-        }
-    ]
-}
-
-localhost:3001/api/v1/schema/getSchemaByConnection?connectionId=7599058705&schemaName=PTCDH_LND
-method: GET
-
- returns something like this : {
-    "objects": [
-        "LND_SAP_US_TRANSACTION",
-        "LND_SAP_JP_TRANSACTION",
-        "LND_SAP_GLBL2_TRANSACTION",
-        "LND_SAP_GLBL1_TRANSACTION",
-        "LND_SAP_GLBL_TRANSACTION",
-        "LND_SAMPLES_TRANSACTION"
-    ]
-}
-
 import { useTranslation } from 'react-i18next';
 import React, { useEffect, useRef, useState } from 'react';
-import { Box, FormControl, Select, MenuItem, Typography, FormHelperText, Grid } from '@mui/material';
+import { Box, FormControl, Autocomplete, TextField, Typography, FormHelperText, Grid } from '@mui/material';
 
 import { Field, Form, Formik } from 'formik';
 import { useJobContext } from '../../../../context/jobContext';
-
+import axios from 'axios';
 import * as Yup from 'yup';
 import TooltipComponent from '../../../Common/Tooltip';
 import { TOAST_TYPE } from '../../../../utils/enums';
@@ -55,14 +17,17 @@ const JobTargetConfig: React.FC = () => {
   const [openToast, setOpenToast] = useState<boolean>(false);
   const [toastInfo, setToastInfo] = useState<{ severity: TOAST_TYPE; message: string }>({ message: '', severity: TOAST_TYPE.INFO });
 
+  const [connectionOptions, setConnectionOptions] = useState<any[]>([]);
+  const [schemaOptions, setSchemaOptions] = useState<any[]>([]);
+  const [objectOptions, setObjectOptions] = useState<string[]>([]);
+
   const validationSchema = Yup.object({
     target_conName: Yup.string().required(t('create_job_conName_reqd')),
     target_schema: Yup.string().required(t('create_job_schema_reqd')),
     target_object: Yup.string().required(t('create_job_object_reqd'))
   });
 
-  const handleChange = (e?: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e?.target;
+  const handleChange = (name: string, value: any) => {
     updateJobData((prevJobData?) => ({
       ...prevJobData,
       [name]: value
@@ -84,6 +49,33 @@ const JobTargetConfig: React.FC = () => {
       } catch (error) {
         handleToast(t('form_error'), TOAST_TYPE.ERROR);
       }
+    }
+  };
+
+  const fetchConnections = async (searchValue: string) => {
+    try {
+      const response = await axios.get(`http://localhost:3001/api/v1/criteria?identifier=IDENTIFIER_PTCDH_SNOWFLAKE_CONNECTIONS_WITH_QUERYSTRING&search=${searchValue}`);
+      setConnectionOptions(response.data);
+    } catch (error) {
+      handleToast(t('fetch_error'), TOAST_TYPE.ERROR);
+    }
+  };
+
+  const fetchSchemas = async (connectionId: string) => {
+    try {
+      const response = await axios.get(`http://localhost:3001/api/v1/schema/getSchemaByConnection?connectionId=${connectionId}`);
+      setSchemaOptions(response.data.schema);
+    } catch (error) {
+      handleToast(t('fetch_error'), TOAST_TYPE.ERROR);
+    }
+  };
+
+  const fetchObjects = async (connectionId: string, schemaName: string) => {
+    try {
+      const response = await axios.get(`http://localhost:3001/api/v1/schema/getSchemaByConnection?connectionId=${connectionId}&schemaName=${schemaName}`);
+      setObjectOptions(response.data.objects);
+    } catch (error) {
+      handleToast(t('fetch_error'), TOAST_TYPE.ERROR);
     }
   };
 
@@ -130,79 +122,75 @@ const JobTargetConfig: React.FC = () => {
                 </Grid>
                 <Grid item xs={12} sm={10}>
                   <FormControl margin="normal" error={touched?.target_conName && Boolean(errors?.target_conName)}>
-                    <Field
+                    <Autocomplete
                       sx={{ width: '20vw' }}
-                      as={Select}
-                      name="target_conName"
+                      options={connectionOptions.map(option => option.CONNECTION_NAME)}
                       value={values?.target_conName}
-                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-                        setFieldValue('target_conName', e?.target?.value);
-                        handleChange(e);
+                      onInputChange={(e, newValue) => {
+                        fetchConnections(newValue);
+                        setFieldValue('target_conName', newValue);
+                        handleChange('target_conName', newValue);
                       }}
-                      onBlur={handleBlur}
-                    >
-                      <MenuItem value={t('job_det_status_snowflake')}>{t('job_det_status_snowflake')}</MenuItem>
-                      <MenuItem value={t('job_det_status_databrick')}>{t('job_det_status_databrick')}</MenuItem>
-                      <MenuItem value={t('job_det_status_trans')}>{t('job_det_status_trans')}</MenuItem>
-                    </Field>
+                      onChange={(e, newValue) => {
+                        const selectedConnection = connectionOptions.find(option => option.CONNECTION_NAME === newValue);
+                        if (selectedConnection) {
+                          fetchSchemas(selectedConnection.CONNECTION_ID);
+                          setFieldValue('target_conName', newValue);
+                          handleChange('target_conName', newValue);
+                        }
+                      }}
+                      renderInput={(params) => <TextField {...params} label={t('job_target_conName')} />}
+                    />
                     {touched?.target_conName && errors?.target_conName && (
                       <FormHelperText className="tw-absolute tw-bottom-[-1.2vw]">{errors?.target_conName}</FormHelperText>
                     )}
                   </FormControl>
                 </Grid>
-                <Grid item xs={12} sm={12} display="inline-flex" alignItems="center" padding={2}>
-                  <Grid item xs={12} sm={2} marginTop="3vh" display="inline-flex">
-                    <Typography sx={{ fontSize: 15, fontWeight: 'bold' }}>{t('job_target_schema')}</Typography>
-                    <TooltipComponent title={t('job_target_schema')} />
-                  </Grid>
-                  <Grid item xs={12} sm={4}>
-                    <FormControl margin="normal" error={touched?.target_schema && Boolean(errors?.target_schema)}>
-                      <Field
-                        sx={{ width: '20vw' }}
-                        as={Select}
-                        name="target_schema"
-                        value={values?.target_schema}
-                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-                          setFieldValue('target_schema', e?.target?.value);
-                          handleChange(e);
-                        }}
-                        onBlur={handleBlur}
-                      >
-                        <MenuItem value={t('job_det_status_snowflake')}>{t('job_det_status_snowflake')}</MenuItem>
-                        <MenuItem value={t('job_det_status_databrick')}>{t('job_det_status_databrick')}</MenuItem>
-                        <MenuItem value={t('job_det_status_trans')}>{t('job_det_status_trans')}</MenuItem>
-                      </Field>
-                      {touched?.target_schema && errors?.target_schema && (
-                        <FormHelperText className="tw-absolute tw-bottom-[-1.2vw]">{errors?.target_schema}</FormHelperText>
-                      )}
-                    </FormControl>
-                  </Grid>
-                  <Grid item xs={12} sm={2} marginTop="3vh" display="inline-flex">
-                    <Typography sx={{ fontSize: 15, fontWeight: 'bold' }}>{t('job_target_object')}</Typography>
-                    <TooltipComponent title={t('job_target_object')} />
-                  </Grid>
-                  <Grid item xs={12} sm={4}>
-                    <FormControl margin="normal" error={touched?.target_object && Boolean(errors?.target_object)}>
-                      <Field
-                        sx={{ width: '20vw' }}
-                        as={Select}
-                        name="target_object"
-                        value={values?.target_object}
-                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-                          setFieldValue('target_object', e?.target?.value);
-                          handleChange(e);
-                        }}
-                        onBlur={handleBlur}
-                      >
-                        <MenuItem value={t('job_det_status_snowflake')}>{t('job_det_status_snowflake')}</MenuItem>
-                        <MenuItem value={t('job_det_status_databrick')}>{t('job_det_status_databrick')}</MenuItem>
-                        <MenuItem value={t('job_det_status_trans')}>{t('job_det_status_trans')}</MenuItem>
-                      </Field>
-                      {touched?.target_object && errors?.target_object && (
-                        <FormHelperText className="tw-absolute tw-bottom-[-1.2vw]">{errors?.target_object}</FormHelperText>
-                      )}
-                    </FormControl>
-                  </Grid>
+                <Grid item xs={12} sm={2} marginTop="3vh" display="inline-flex">
+                  <Typography sx={{ fontSize: 15, fontWeight: 'bold' }}>{t('job_target_schema')}</Typography>
+                  <TooltipComponent title={t('job_target_schema')} />
+                </Grid>
+                <Grid item xs={12} sm={4}>
+                  <FormControl margin="normal" error={touched?.target_schema && Boolean(errors?.target_schema)}>
+                    <Autocomplete
+                      sx={{ width: '20vw' }}
+                      options={schemaOptions.map(option => option.SCHEMA_NAME)}
+                      value={values?.target_schema}
+                      onChange={(e, newValue) => {
+                        const selectedSchema = schemaOptions.find(option => option.SCHEMA_NAME === newValue);
+                        if (selectedSchema) {
+                          fetchObjects(values?.target_conName, newValue);
+                          setFieldValue('target_schema', newValue);
+                          handleChange('target_schema', newValue);
+                        }
+                      }}
+                      renderInput={(params) => <TextField {...params} label={t('job_target_schema')} />}
+                    />
+                    {touched?.target_schema && errors?.target_schema && (
+                      <FormHelperText className="tw-absolute tw-bottom-[-1.2vw]">{errors?.target_schema}</FormHelperText>
+                    )}
+                  </FormControl>
+                </Grid>
+                <Grid item xs={12} sm={2} marginTop="3vh" display="inline-flex">
+                  <Typography sx={{ fontSize: 15, fontWeight: 'bold' }}>{t('job_target_object')}</Typography>
+                  <TooltipComponent title={t('job_target_object')} />
+                </Grid>
+                <Grid item xs={12} sm={4}>
+                  <FormControl margin="normal" error={touched?.target_object && Boolean(errors?.target_object)}>
+                    <Autocomplete
+                      sx={{ width: '20vw' }}
+                      options={objectOptions}
+                      value={values?.target_object}
+                      onChange={(e, newValue) => {
+                        setFieldValue('target_object', newValue);
+                        handleChange('target_object', newValue);
+                      }}
+                      renderInput={(params) => <TextField {...params} label={t('job_target_object')} />}
+                    />
+                    {touched?.target_object && errors?.target_object && (
+                      <FormHelperText className="tw-absolute tw-bottom-[-1.2vw]">{errors?.target_object}</FormHelperText>
+                    )}
+                  </FormControl>
                 </Grid>
               </Grid>
             </Box>
@@ -218,32 +206,50 @@ export default JobTargetConfig;
 
 
 
-jobContext.tsx
+import React, { createContext, useContext, useState, ReactNode, useCallback } from 'react';
 
-import { createContext, useContext, useState, ReactNode } from 'react';
-import { JobContextProps, JobProviderProps } from '../components/Jobs/job.interface';
+interface JobData {
+  job_name: string;
+  description: string;
+  job_type: string;
+  source_conName: string;
+  source_schema: string;
+  source_object: string;
+  target_conName: string;
+  target_schema: string;
+  target_object: string;
+  selectedOption: string;
+  checkboxStates: Record<string, boolean>;
+  previewData: Record<string, string>;
+}
 
-const JobContext = createContext<JobContextProps>({
-  jobData: null,
-  step: 0,
-  headers: [],
-  charCount: 0,
-  updateJobData: () => {},
-  updateStage: () => {},
-  updateHeaders: () => {},
-  setCharCount: () => {},
-  validateJobDetails: () => Promise.resolve(),
-  validateJobSource: () => Promise.resolve(),
-  validateJobTarget: () => Promise.resolve(),
-  setJobDetailsValidation: () => {},
-  setJobSourceValidation: () => {},
-  setJobTargetValidation: () => {},
-  isNexButtonClicked: false,
-  handleNextClick: () => {}
-});
+interface JobContextProps {
+  jobData: JobData;
+  step: number;
+  headers: any[];
+  charCount: number;
+  updateJobData: (newData: Partial<JobData>) => void;
+  updateStage: (value: number) => void;
+  updateHeaders: (headers: any[]) => void;
+  setCharCount: (count: number) => void;
+  validateJobDetails: () => Promise<void>;
+  validateJobSource: () => Promise<void>;
+  validateJobTarget: () => Promise<void>;
+  setJobDetailsValidation: (validationFn: () => Promise<void>) => void;
+  setJobSourceValidation: (validationFn: () => Promise<void>) => void;
+  setJobTargetValidation: (validationFn: () => Promise<void>) => void;
+  isNexButtonClicked: boolean;
+  handleNextClick: (clicked: boolean) => void;
+}
+
+interface JobProviderProps {
+  children: ReactNode;
+}
+
+const JobContext = createContext<JobContextProps | undefined>(undefined);
 
 export const JobProvider = ({ children }: JobProviderProps) => {
-  const [jobData, setJobData] = useState({
+  const [jobData, setJobData] = useState<JobData>({
     job_name: '',
     description: '',
     job_type: '',
@@ -251,73 +257,36 @@ export const JobProvider = ({ children }: JobProviderProps) => {
     source_schema: '',
     source_object: '',
     target_conName: '',
-    target_object: '',
     target_schema: '',
+    target_object: '',
     selectedOption: '',
     checkboxStates: {},
     previewData: {}
   });
 
-  const [headers, setHeaders] = useState([]);
+  const [headers, setHeaders] = useState<any[]>([]);
   const [step, setStep] = useState(0);
   const [charCount, setCharCount] = useState(256);
-  const [validateJobDetails, setJobDetailsValidation] = useState(() => () => Promise.resolve());
-  const [validateJobSource, setJobSourceValidation] = useState(() => () => Promise.resolve());
-  const [validateJobTarget, setJobTargetValidation] = useState(() => () => Promise.resolve());
+  const [validateJobDetails, setJobDetailsValidation] = useState<() => Promise<void>>(() => async () => {});
+  const [validateJobSource, setJobSourceValidation] = useState<() => Promise<void>>(() => async () => {});
+  const [validateJobTarget, setJobTargetValidation] = useState<() => Promise<void>>(() => async () => {});
   const [isNexButtonClicked, setNextButtonClicked] = useState(false);
 
-  const updateJobData = (value?: any) => {
-    setJobData(value);
-  };
-
-  const updateStage = (value?: any) => {
-    setStep(value);
-  };
-
-  const updateHeaders = (value?: any) => {
-    setHeaders(value);
-  };
-
-  const handleNextClick = (value?: boolean) => {
-    setNextButtonClicked(value);
-  };
-
-  const updateCheckboxState = (checkbox?: string) => {
-    setJobData((prevState?) => ({
-      ...prevState,
-      checkboxStates: {
-        ...prevState?.checkboxStates,
-        [checkbox]: !prevState.checkboxStates[checkbox]
-      }
+  const updateJobData = useCallback((newData: Partial<JobData>) => {
+    setJobData((prevData) => ({
+      ...prevData,
+      ...newData
     }));
-  };
+  }, []);
 
-  const updateSelectedOption = (option?: string) => {
-    setJobData((prevState) => ({
-      ...prevState,
-      selectedOption: option,
-      checkboxStates: {}
-    }));
-  };
-
-  const updatePreviewData = (checkbox?: string, data?: string) => {
-    setJobData((prevState?) => ({
-      ...prevState,
-      previewData: {
-        ...prevState?.previewData,
-        [checkbox]: data
-      }
-    }));
-  };
-
-  const context: JobContextProps = {
+  const contextValue = {
     jobData,
     step,
     headers,
     charCount,
     updateJobData,
-    updateStage,
-    updateHeaders,
+    updateStage: setStep,
+    updateHeaders: setHeaders,
     setCharCount,
     validateJobDetails,
     validateJobSource,
@@ -326,13 +295,16 @@ export const JobProvider = ({ children }: JobProviderProps) => {
     setJobSourceValidation,
     setJobTargetValidation,
     isNexButtonClicked,
-    handleNextClick,
-    updateCheckboxState,
-    updateSelectedOption,
-    updatePreviewData
+    handleNextClick: setNextButtonClicked
   };
 
-  return <JobContext.Provider value={context}>{children}</JobContext.Provider>;
+  return <JobContext.Provider value={contextValue}>{children}</JobContext.Provider>;
 };
 
-export const useJobContext = () => useContext(JobContext);
+export const useJobContext = (): JobContextProps => {
+  const context = useContext(JobContext);
+  if (!context) {
+    throw new Error('useJobContext must be used within a JobProvider');
+  }
+  return context;
+};
