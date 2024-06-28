@@ -65,7 +65,7 @@ const TargetConfiguration: React.FC = () => {
 
   const fetchSchemas = async (connectionId?: string) => {
     try {
-      const response = await axios.get(`http://localhost:3001/api/v1/schema/getSchemaByConnection?connectionId=${connectionId}`);
+      const response = await axios?.get(`http://localhost:3001/api/v1/schema/getSchemaByConnection?connectionId=${connectionId}`);
       setSchemaOptions(response?.data?.schema);
     } catch (error) {
       handleToast(t('fetch_error'), TOAST_TYPE.ERROR);
@@ -77,7 +77,7 @@ const TargetConfiguration: React.FC = () => {
       const response = await axios?.get(
         `http://localhost:3001/api/v1/schema/getSchemaByConnection?connectionId=${connectionId}&schemaName=${schemaName}`
       );
-      setObjectOptions(response?.data.objects);
+      setObjectOptions(response?.data?.objects);
     } catch (error) {
       handleToast(t('fetch_error'), TOAST_TYPE.ERROR);
     }
@@ -128,34 +128,34 @@ const TargetConfiguration: React.FC = () => {
                   <FormControl margin="normal" error={touched?.target_conName && Boolean(errors?.target_conName)}>
                     <Autocomplete
                       sx={{ width: '20vw' }}
-                      options={connectionOptions.map((option) => option.CONNECTION_NAME)}
+                      options={connectionOptions.map((option?) => option.CONNECTION_NAME)}
                       value={values?.target_conName}
                       onInputChange={(e, newValue) => {
                         fetchConnections(newValue);
-                        setFieldValue('target_conName', newValue);
-                        handleChange('target_conName', newValue);
-                        setFieldValue('target_schema', '');
-                        setFieldValue('target_object', '');
-                        handleChange('target_schema', '');
-                        handleChange('target_object', '');
+                        setFieldValue(t('target_conName'), newValue);
+                        handleChange(t('target_conName'), newValue);
+                        setFieldValue(t('target_schema'), '');
+                        setFieldValue(t('target_object'), '');
+                        handleChange(t('target_schema'), '');
+                        handleChange(t('target_object'), '');
                         setSchemaOptions([]);
                         setObjectOptions([]);
                       }}
                       onChange={(e, newValue) => {
-                        const selectedConnection = connectionOptions.find((option) => option.CONNECTION_NAME === newValue);
+                        const selectedConnection = connectionOptions?.find((option?) => option?.CONNECTION_NAME === newValue);
                         if (selectedConnection) {
-                          fetchSchemas(selectedConnection.CONNECTION_ID);
-                          setFieldValue('target_conName', newValue);
-                          handleChange('target_conName', newValue);
+                          fetchSchemas(selectedConnection?.CONNECTION_ID);
+                          setFieldValue(t('target_conName'), newValue);
+                          handleChange(t('target_conName'), newValue);
                         }
-                        setFieldValue('target_schema', '');
-                        setFieldValue('target_object', '');
-                        handleChange('target_schema', '');
-                        handleChange('target_object', '');
+                        setFieldValue(t('target_schema'), '');
+                        setFieldValue(t('target_object'), '');
+                        handleChange(t('target_schema'), '');
+                        handleChange(t('target_object'), '');
                         setSchemaOptions([]);
                         setObjectOptions([]);
                       }}
-                      renderInput={(params) => <TextField {...params} label={t('job_target_conName')} />}
+                      renderInput={(params?) => <TextField {...params} label={t('job_target_conName')} />}
                     />
                     {touched?.target_conName && errors?.target_conName && (
                       <FormHelperText className="tw-absolute tw-bottom-[-1.2vw]">{errors?.target_conName}</FormHelperText>
@@ -170,21 +170,22 @@ const TargetConfiguration: React.FC = () => {
                   <FormControl margin="normal" error={touched?.target_schema && Boolean(errors?.target_schema)}>
                     <Autocomplete
                       sx={{ width: '20vw' }}
-                      options={schemaOptions.map((option) => option.SCHEMA_NAME)}
+                      options={schemaOptions?.map((option?) => option?.SCHEMA_NAME)}
                       value={values?.target_schema}
                       onChange={(e, newValue) => {
-                        const selectedConnection = connectionOptions.find((option) => option.CONNECTION_NAME === values?.target_conName);
-                        const selectedSchema = schemaOptions.find((option) => option.SCHEMA_NAME === newValue);
+                        const selectedConnection = connectionOptions?.find((option?) => option?.CONNECTION_NAME === values?.target_conName);
+                        const selectedSchema = schemaOptions?.find((option) => option?.SCHEMA_NAME === newValue);
                         if (selectedSchema) {
-                          fetchObjects(selectedConnection.CONNECTION_ID, newValue);
-                          setFieldValue('target_schema', newValue);
-                          handleChange('target_schema', newValue);
+                          fetchObjects(selectedConnection?.CONNECTION_ID, newValue);
+                          setFieldValue(t('target_schema'), newValue);
+                          handleChange(t('target_schema'), newValue);
+                          console.log('job data', jobData);
                         }
-                        setFieldValue('target_object', '');
-                        handleChange('target_object', '');
+                        setFieldValue(t('target_object'), '');
+                        handleChange(t('target_object'), '');
                         setObjectOptions([]);
                       }}
-                      renderInput={(params) => <TextField {...params} label={t('job_target_schema')} />}
+                      renderInput={(params?) => <TextField {...params} label={t('job_target_schema')} />}
                     />
                     {touched?.target_schema && errors?.target_schema && (
                       <FormHelperText className="tw-absolute tw-bottom-[-1.2vw]">{errors?.target_schema}</FormHelperText>
@@ -202,10 +203,11 @@ const TargetConfiguration: React.FC = () => {
                       options={objectOptions}
                       value={values?.target_object}
                       onChange={(e, newValue) => {
-                        setFieldValue('target_object', newValue);
-                        handleChange('target_object', newValue);
+                        setFieldValue(t('target_object'), newValue);
+                        handleChange(t('target_object'), newValue);
+                        console.log('job data', jobData);
                       }}
-                      renderInput={(params) => <TextField {...params} label={t('job_target_object')} />}
+                      renderInput={(params?) => <TextField {...params} label={t('job_target_object')} />}
                     />
                     {touched?.target_object && errors?.target_object && (
                       <FormHelperText className="tw-absolute tw-bottom-[-1.2vw]">{errors?.target_object}</FormHelperText>
