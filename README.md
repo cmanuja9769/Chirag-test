@@ -11,7 +11,7 @@ import { TOAST_TYPE } from '../../../../utils/enums';
 import ToastMessage from '../../../Common/ToastMessage/ToastMessage';
 import apiConfig from '../../../../utils/apiConfig';
 import { JobEndpoints } from '../../../../utils/constants/apiEndpoints';
-import { useFetcher } from '../../../../hooks/useReactQuery';
+import apiClient from '../../../../utils/constants/apiClient';
 
 const JobTargetConfig: React.FC = () => {
   const { t } = useTranslation();
@@ -29,23 +29,6 @@ const JobTargetConfig: React.FC = () => {
     target_schema: Yup.string().required(t('create_job_schema_reqd')),
     target_object: Yup.string().required(t('create_job_object_reqd'))
   });
-
-  const dataFormation = (results: any) => {
-    console.log('recd');
-    if (results) {
-      console.log(results);
-    }
-  };
-
-  const fetchRequest = (url?: string) => {
-    console.log('Hello', url);
-    const { data, isLoading, isFetching, refetch, isError } = useFetcher({
-      url: url,
-      queryKey: [],
-      enableQuery: true,
-      dataFormatter: dataFormation
-    });
-  };
 
   const handleChange = (name?: string, value?: any) => {
     updateJobData((prevJobData?) => ({
@@ -74,11 +57,8 @@ const JobTargetConfig: React.FC = () => {
 
   const fetchConnections = async (searchValue?: string) => {
     try {
-      const url = `${apiConfig?.apiURL}${JobEndpoints?.searchConnections}&search=${searchValue}`;
-      console.log('url', url);
-      const conNameObj = 'target_conName';
-      fetchRequest(url);
-      // setConnectionOptions(response?.data);
+      const response = await apiClient.get(`${JobEndpoints?.searchConnections}&search=${searchValue}`);
+      setConnectionOptions(response?.data);
     } catch (error) {
       handleToast(t('fetch_error'), TOAST_TYPE.ERROR);
     }
@@ -86,7 +66,7 @@ const JobTargetConfig: React.FC = () => {
 
   const fetchSchemas = async (connectionId?: string) => {
     try {
-      const response = await axios?.get(`${apiConfig?.apiURL}${JobEndpoints?.getSchemaByConnection}?connectionId=${connectionId}`);
+      const response = await apiClient.get(`${JobEndpoints?.getSchemaByConnection}?connectionId=${connectionId}`);
       setSchemaOptions(response?.data?.schema);
     } catch (error) {
       handleToast(t('fetch_error'), TOAST_TYPE.ERROR);
@@ -95,9 +75,7 @@ const JobTargetConfig: React.FC = () => {
 
   const fetchObjects = async (connectionId?: string, schemaName?: string) => {
     try {
-      const response = await axios?.get(
-        `${apiConfig.apiURL}${JobEndpoints?.getSchemaByConnection}?connectionId=${connectionId}&schemaName=${schemaName}`
-      );
+      const response = await apiClient.get(`${JobEndpoints?.getSchemaByConnection}?connectionId=${connectionId}&schemaName=${schemaName}`);
       setObjectOptions(response?.data?.objects);
     } catch (error) {
       handleToast(t('fetch_error'), TOAST_TYPE.ERROR);
