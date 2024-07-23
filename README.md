@@ -27,6 +27,11 @@ const ViewJob = () => {
     getJobByID(id)
       .then((apiResponse: ApiResponseType) => {
         mapJobData(apiResponse);
+        appContext?.updateToastAttributes({
+          showToast: true,
+          severity: TOAST_TYPE.ERROR,
+          toastMsg: t('noDataFoundError')
+        });
         appContext?.updateIsLoading(false);
       })
       .catch(() => {
@@ -48,33 +53,37 @@ const ViewJob = () => {
   }, []);
 
   useEffect(() => {
+    console.log('jobdata', jobContext?.jobData?.operationConfigRows);
+    console.log('jobdata', typeof jobContext?.jobData?.operationConfigRows);
     const formattedRows = jobContext?.jobData?.operationConfigRows?.map((row, index) => ({
       id: index,
       ...row
-    })) || [];
+    }));
     setRows(formattedRows);
   }, [jobContext?.jobData?.operationConfigRows]);
 
-  const mapJobData = (data?: ApiResponseType) => {
-    const apiResponse = data;
-    const jobName = apiResponse?.jobDetails?.JOB_NAME || '';
-    const jobDescription = apiResponse?.jobDetails?.DESCRIPTION || '';
-    const jobType = apiResponse?.jobDetails?.JOB_TYPE || '';
+  const mapJobData = (data: ApiResponseType) => {
+    const jobDetails = data?.jobDetails;
+    const jobName = jobDetails?.JOB_NAME || '';
+    const jobDescription = jobDetails?.DESCRIPTION || '';
+    const jobType = jobDetails?.JOB_TYPE || '';
 
-    const operationConfigRows = Object.values(apiResponse?.operationConfigurationDetails || {}).map((operation) => ({
+    const operationConfigRows = data?.operationConfigurationDetails?.map((operation) => ({
       operationSequence: operation?.OPERATION_ID,
       operationName: operation?.OPERATION_NAME,
       operationTag: operation?.OPERATION_TAG,
       operationTagValue: operation?.OPERATION_TAG_VALUE_GUI ?? operation?.OPERATION_TAG_VALUE,
       operationType: operation?.OPERATION_TYPE
-    }));
+    })) || [];
 
+    console.log('rows', operationConfigRows);
     jobContext?.updateJobData({
       jobName,
       jobDescription,
       jobType,
       operationConfigRows
     });
+    appContext?.updateIsLoading(false);
   };
 
   const handleClose = () => {
