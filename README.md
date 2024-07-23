@@ -61,16 +61,13 @@ const ViewJob = () => {
     const jobDescription = apiResponse?.jobDetails?.DESCRIPTION || '';
     const jobType = apiResponse?.jobDetails?.JOB_TYPE || '';
 
-    let operationConfigRows = [];
-    apiResponse?.operationConfigurationDetails?.forEach((operation) => {
-      operationConfigRows.push({
-        operationSequence: operation?.OPERATION_ID,
-        operationName: operation?.OPERATION_NAME,
-        operationTag: operation?.OPERATION_TAG,
-        operationTagValue: operation?.OPERATION_TAG_VALUE_GUI ?? operation?.OPERATION_TAG_VALUE,
-        operationType: operation?.OPERATION_TYPE
-      });
-    });
+    const operationConfigRows = Object.values(apiResponse?.operationConfigurationDetails || {}).map((operation) => ({
+      operationSequence: operation?.OPERATION_ID,
+      operationName: operation?.OPERATION_NAME,
+      operationTag: operation?.OPERATION_TAG,
+      operationTagValue: operation?.OPERATION_TAG_VALUE_GUI ?? operation?.OPERATION_TAG_VALUE,
+      operationType: operation?.OPERATION_TYPE
+    }));
 
     jobContext?.updateJobData({
       jobName,
@@ -78,7 +75,6 @@ const ViewJob = () => {
       jobType,
       operationConfigRows
     });
-    appContext?.updateIsLoading(false);
   };
 
   const handleClose = () => {
