@@ -27,6 +27,7 @@ const ViewJob = () => {
     getJobByID(id)
       .then((apiResponse: ApiResponseType) => {
         mapJobData(apiResponse);
+        appContext?.updateIsLoading(false);
       })
       .catch(() => {
         appContext?.updateToastAttributes({
@@ -50,22 +51,26 @@ const ViewJob = () => {
     const formattedRows = jobContext?.jobData?.operationConfigRows?.map((row, index) => ({
       id: index,
       ...row
-    }));
+    })) || [];
     setRows(formattedRows);
   }, [jobContext?.jobData?.operationConfigRows]);
 
-  const mapJobData = (data: ApiResponseType) => {
-    const jobName = data?.jobDetails?.JOB_NAME || '';
-    const jobDescription = data?.jobDetails?.DESCRIPTION || '';
-    const jobType = data?.jobDetails?.JOB_TYPE || '';
+  const mapJobData = (data?: ApiResponseType) => {
+    const apiResponse = data;
+    const jobName = apiResponse?.jobDetails?.JOB_NAME || '';
+    const jobDescription = apiResponse?.jobDetails?.DESCRIPTION || '';
+    const jobType = apiResponse?.jobDetails?.JOB_TYPE || '';
 
-    const operationConfigRows = data?.operationConfigurationDetails?.map(operation => ({
-      operationSequence: operation.OPERATION_ID,
-      operationName: operation.OPERATION_NAME,
-      operationTag: operation.OPERATION_TAG,
-      operationTagValue: operation.OPERATION_TAG_VALUE_GUI ?? operation.OPERATION_TAG_VALUE,
-      operationType: operation.OPERATION_TYPE
-    }));
+    let operationConfigRows = [];
+    apiResponse?.operationConfigurationDetails?.forEach((operation) => {
+      operationConfigRows.push({
+        operationSequence: operation?.OPERATION_ID,
+        operationName: operation?.OPERATION_NAME,
+        operationTag: operation?.OPERATION_TAG,
+        operationTagValue: operation?.OPERATION_TAG_VALUE_GUI ?? operation?.OPERATION_TAG_VALUE,
+        operationType: operation?.OPERATION_TYPE
+      });
+    });
 
     jobContext?.updateJobData({
       jobName,
