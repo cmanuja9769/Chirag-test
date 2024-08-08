@@ -1,58 +1,89 @@
-import * as React from 'react';
-import { DataGrid, GridColDef, GridRenderCellParams } from '@mui/x-data-grid';
-import { TextField } from '@mui/material';
+import React, { useState } from 'react';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Paper,
+  TablePagination,
+  Button,
+} from '@mui/material';
 
-type RowData = {
+interface Data {
   id: number;
   name: string;
+}
+
+const createData = (id: number, name: string): Data => {
+  return { id, name };
 };
 
-const initialRows: RowData[] = [
-  { id: 1, name: 'Alice' },
-  { id: 2, name: 'Bob' },
-  // Add more rows as needed
-];
+const MyTable: React.FC = () => {
+  const [rows, setRows] = useState<Data[]>([
+    createData(1, 'Row 1'),
+    createData(2, 'Row 2'),
+    createData(3, 'Row 3'),
+    createData(4, 'Row 4'),
+    createData(5, 'Row 5'),
+    createData(6, 'Row 6'),
+    createData(7, 'Row 7'),
+    createData(8, 'Row 8'),
+    createData(9, 'Row 9'),
+    createData(10, 'Row 10'),
+  ]);
+  const [page, setPage] = useState(0);
+  const [rowsPerPage] = useState(10);
 
-const DataGridWithTextField = () => {
-  const [rows, setRows] = React.useState<RowData[]>(initialRows);
-  const [editCellData, setEditCellData] = React.useState<{ [key: number]: string }>({});
+  const handleChangePage = (event: unknown, newPage: number) => {
+    setPage(newPage);
+  };
 
-  const handleEditCellChange = React.useCallback((id: number, value: string) => {
-    setEditCellData((prev) => ({
-      ...prev,
-      [id]: value,
-    }));
-  }, []);
-
-  const columns: GridColDef[] = React.useMemo(() => [
-    { field: 'id', headerName: 'ID', width: 100 },
-    {
-      field: 'name',
-      headerName: 'Name',
-      width: 300,
-      renderCell: (params: GridRenderCellParams<string>) => {
-        return (
-          <TextField
-            value={editCellData[params.id] || params.value || ''}
-            onChange={(event) => handleEditCellChange(params.id as number, event.target.value)}
-            variant="outlined"
-            fullWidth
-          />
-        );
-      },
-    },
-  ], [editCellData, handleEditCellChange]);
+  const handleAddRow = () => {
+    const newRow = createData(rows.length + 1, `Row ${rows.length + 1}`);
+    setRows([...rows, newRow]);
+    if ((page + 1) * rowsPerPage <= rows.length) {
+      setPage(page + 1);
+    }
+  };
 
   return (
-    <div style={{ height: 400, width: '100%' }}>
-      <DataGrid
-        rows={rows}
-        columns={columns}
-        pageSize={5}
-        rowsPerPageOptions={[5]}
+    <Paper>
+      <TableContainer>
+        <Table>
+          <TableHead>
+            <TableRow>
+              <TableCell>ID</TableCell>
+              <TableCell>Name</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {(rowsPerPage > 0
+              ? rows.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
+              : rows
+            ).map((row) => (
+              <TableRow key={row.id}>
+                <TableCell>{row.id}</TableCell>
+                <TableCell>{row.name}</TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </TableContainer>
+      <TablePagination
+        component="div"
+        count={rows.length}
+        rowsPerPage={rowsPerPage}
+        page={page}
+        onPageChange={handleChangePage}
+        rowsPerPageOptions={[10]}
       />
-    </div>
+      <Button variant="contained" color="primary" onClick={handleAddRow}>
+        Add Row
+      </Button>
+    </Paper>
   );
 };
 
-export default DataGridWithTextField;
+export default MyTable;
